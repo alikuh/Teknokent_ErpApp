@@ -1,0 +1,13 @@
+# .NET
+bin/
+obj/
+
+# IDE
+.vs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
