@@ -128,3 +128,4 @@
 /home/alikuh/projects/erp-app/backend/ErpApi/bin/Debug/net10.0/RESPite.dll
 /home/alikuh/projects/erp-app/backend/ErpApi/bin/Debug/net10.0/StackExchange.Redis.dll
 /home/alikuh/projects/erp-app/backend/ErpApi/bin/Debug/net10.0/System.IO.Hashing.dll
+/home/alikuh/projects/erp-app/backend/ErpApi/obj/Debug/net10.0/ErpApi.sourcelink.json

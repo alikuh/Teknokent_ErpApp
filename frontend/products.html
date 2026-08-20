@@ -117,13 +117,14 @@
     </div>
 
     <div class="container">
-        <h2>Yeni Ürün Ekle</h2>
+        <h2 id="formTitle">Yeni Ürün Ekle</h2>
         <div class="form-row">
             <input type="text" id="name" placeholder="Ürün adı">
             <input type="text" id="description" placeholder="Açıklama (opsiyonel)">
             <input type="number" id="price" placeholder="Fiyat" step="0.01">
             <input type="number" id="stockQuantity" placeholder="Stok adedi">
-            <button onclick="addProduct()">Ekle</button>
+            <button id="submitButton" onclick="addProduct()">Ekle</button>
+            <button id="cancelButton" onclick="cancelEdit()" style="display:none; background:#888;">İptal</button>
         </div>
 
         <h2>Ürün Listesi</h2>
@@ -171,19 +172,76 @@
                 const stockClass = p.stockQuantity < 10 ? "low-stock" : "";
 
                 row.innerHTML = `
-      <td>${p.name}</td>
-      <td>${p.description ?? ""}</td>
-      <td>${p.price.toFixed(2)} TL</td>
-      <td class="${stockClass}">${p.stockQuantity}</td>
-      <td class="actions">
-        <button class="btn-sell" onclick="sellProduct(${p.id})">Sat</button>
-        <button class="btn-delete" onclick="deleteProduct(${p.id})">Sil</button>
-      </td>
-    `;
+                    <td>${p.name}</td>
+                    <td>${p.description ?? ""}</td>
+                    <td>${p.price.toFixed(2)} TL</td>
+                    <td class="${stockClass}">${p.stockQuantity}</td>
+                    <td class="actions">
+                        <button class="btn-sell" onclick="sellProduct(${p.id})">Sat</button>
+                        <button class="btn-edit" onclick='startEdit(${JSON.stringify(p)})'>Düzenle</button>
+                        <button class="btn-delete" onclick="deleteProduct(${p.id})">Sil</button>
+                    </td>
+                    `;
                 tbody.appendChild(row);
             });
         }
+        let editingProductId = null;
 
+        function startEdit(product) {
+            editingProductId = product.id;
+
+            document.getElementById("name").value = product.name;
+            document.getElementById("description").value = product.description ?? "";
+            document.getElementById("price").value = product.price;
+            document.getElementById("stockQuantity").value = product.stockQuantity;
+
+            document.getElementById("formTitle").textContent = "Ürünü Düzenle";
+            document.getElementById("submitButton").textContent = "Güncelle";
+            document.getElementById("submitButton").setAttribute("onclick", "updateProduct()");
+            document.getElementById("cancelButton").style.display = "inline-block";
+
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        function cancelEdit() {
+            editingProductId = null;
+
+            document.getElementById("name").value = "";
+            document.getElementById("description").value = "";
+            document.getElementById("price").value = "";
+            document.getElementById("stockQuantity").value = "";
+
+            document.getElementById("formTitle").textContent = "Yeni Ürün Ekle";
+            document.getElementById("submitButton").textContent = "Ekle";
+            document.getElementById("submitButton").setAttribute("onclick", "addProduct()");
+            document.getElementById("cancelButton").style.display = "none";
+        }
+
+        async function updateProduct() {
+            const name = document.getElementById("name").value;
+            const description = document.getElementById("description").value;
+            const price = parseFloat(document.getElementById("price").value);
+            const stockQuantity = parseInt(document.getElementById("stockQuantity").value);
+
+            if (!name || isNaN(price) || isNaN(stockQuantity)) {
+                alert("Lütfen ürün adı, fiyat ve stok adedini doğru gir.");
+                return;
+            }
+
+            const response = await fetch(`${API_URL}/products/${editingProductId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", "Authorization": token },
+                body: JSON.stringify({ id: editingProductId, name, description, price, stockQuantity })
+            });
+
+            if (!response.ok) {
+                alert("Güncelleme sırasında bir hata oluştu.");
+                return;
+            }
+
+            cancelEdit();
+            loadProducts();
+        }
         async function addProduct() {
             const name = document.getElementById("name").value;
             const description = document.getElementById("description").value;

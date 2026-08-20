@@ -146,7 +146,21 @@
             <tbody id="topProductsBody"></tbody>
         </table>
     </div>
-
+    <div class="panel">
+        <h2>Son Satışlar</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Ürün</th>
+                    <th>Adet</th>
+                    <th>Birim Fiyat</th>
+                    <th>Toplam</th>
+                    <th>Tarih</th>
+                </tr>
+            </thead>
+            <tbody id="salesHistoryBody"></tbody>
+        </table>
+    </div>
     <script>
         const API_URL = "http://localhost:5077/api";
         const token = sessionStorage.getItem("token");
@@ -216,10 +230,34 @@
                 tbody.appendChild(row);
             });
         }
+        async function loadSalesHistory() {
+            const response = await fetch(`${API_URL}/sales`, {
+                headers: { "Authorization": token }
+            });
+            const sales = await response.json();
 
+            sales.sort((a, b) => new Date(b.soldAt) - new Date(a.soldAt));
+
+            const tbody = document.getElementById("salesHistoryBody");
+            tbody.innerHTML = "";
+
+            sales.forEach(s => {
+                const row = document.createElement("tr");
+                const date = new Date(s.soldAt).toLocaleString("tr-TR");
+                row.innerHTML = `
+            <td>${s.product ? s.product.name : "-"}</td>
+            <td>${s.quantity}</td>
+            <td>${s.unitPrice.toFixed(2)} TL</td>
+            <td>${s.totalPrice.toFixed(2)} TL</td>
+            <td>${date}</td>
+            `;
+                tbody.appendChild(row);
+            });
+        }
         loadSummary();
         loadSalesChart();
         loadTopProducts();
+        loadSalesHistory();
     </script>
 
 </body>
