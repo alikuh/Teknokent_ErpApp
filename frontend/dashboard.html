@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ERP - Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .topbar a {
+            margin-left: 15px;
+            color: #2c7be5;
+            text-decoration: none;
+        }
+
+        .cards {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            flex: 1;
+            min-width: 150px;
+            text-align: center;
+        }
+
+        .card h3 {
+            margin: 0 0 8px 0;
+            font-size: 13px;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .card .value {
+            font-size: 26px;
+            font-weight: bold;
+            color: #2c7be5;
+        }
+
+        .card.warning .value {
+            color: #e63946;
+        }
+
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #fafafa;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="topbar">
+        <div>Hoş geldin, <strong id="usernameDisplay"></strong></div>
+        <div>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="products.html">Ürünler</a>
+            <a href="#" onclick="logout()">Çıkış Yap</a>
+        </div>
+    </div>
+
+    <div class="cards">
+        <div class="card">
+            <h3>Bugünkü Satış</h3>
+            <div class="value" id="dailySales">-</div>
+        </div>
+        <div class="card">
+            <h3>Haftalık Satış</h3>
+            <div class="value" id="weeklySales">-</div>
+        </div>
+        <div class="card">
+            <h3>Aylık Satış</h3>
+            <div class="value" id="monthlySales">-</div>
+        </div>
+        <div class="card">
+            <h3>Toplam Ürün</h3>
+            <div class="value" id="totalProducts">-</div>
+        </div>
+        <div class="card">
+            <h3>Toplam Stok</h3>
+            <div class="value" id="totalStock">-</div>
+        </div>
+        <div class="card warning">
+            <h3>Azalan Stok</h3>
+            <div class="value" id="lowStockProducts">-</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>Son 7 Günlük Satış Grafiği</h2>
+        <canvas id="salesChart" height="80"></canvas>
+    </div>
+
+    <div class="panel">
+        <h2>En Çok Satan Ürünler</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Ürün</th>
+                    <th>Satılan Adet</th>
+                    <th>Toplam Gelir</th>
+                </tr>
+            </thead>
+            <tbody id="topProductsBody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:5077/api";
+        const token = sessionStorage.getItem("token");
+        const username = sessionStorage.getItem("username");
+
+        if (!token) {
+            window.location.href = "login.html";
+        }
+
+        document.getElementById("usernameDisplay").textContent = username;
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = "login.html";
+        }
+
+        async function loadSummary() {
+            const response = await fetch(`${API_URL}/dashboard/summary`, {
+                headers: { "Authorization": token }
+            });
+            const data = await response.json();
+
+            document.getElementById("dailySales").textContent = data.dailySales.toFixed(2) + " TL";
+            document.getElementById("weeklySales").textContent = data.weeklySales.toFixed(2) + " TL";
+            document.getElementById("monthlySales").textContent = data.monthlySales.toFixed(2) + " TL";
+            document.getElementById("totalProducts").textContent = data.totalProducts;
+            document.getElementById("totalStock").textContent = data.totalStock;
+            document.getElementById("lowStockProducts").textContent = data.lowStockProducts;
+        }
+
+        async function loadSalesChart() {
+            const response = await fetch(`${API_URL}/dashboard/sales-by-day?days=7`, {
+                headers: { "Authorization": token }
+            });
+            const data = await response.json();
+
+            const labels = data.map(d => d.date);
+            const revenues = data.map(d => d.totalRevenue);
+
+            const ctx = document.getElementById("salesChart").getContext("2d");
+            new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: "Günlük Satış Geliri (TL)",
+                        data: revenues,
+                        backgroundColor: "#2c7be5"
+                    }]
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        async function loadTopProducts() {
+            const response = await fetch(`${API_URL}/dashboard/top-products?count=5`, {
+                headers: { "Authorization": token }
+            });
+            const data = await response.json();
+
+            const tbody = document.getElementById("topProductsBody");
+            tbody.innerHTML = "";
+
+            data.forEach(p => {
+                const row = document.createElement("tr");
+                row.innerHTML = `<td>${p.productName}</td><td>${p.totalSold}</td><td>${p.totalRevenue.toFixed(2)} TL</td>`;
+                tbody.appendChild(row);
+            });
+        }
+
+        loadSummary();
+        loadSalesChart();
+        loadTopProducts();
+    </script>
+
+</body>
+
+</html>
