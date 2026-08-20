@@ -92,7 +92,8 @@
                 });
 
                 if (!response.ok) {
-                    messageEl.textContent = "Kullanıcı adı veya şifre hatalı.";
+                    const errorText = await response.text();
+                    messageEl.textContent = errorText || "Kullanıcı adı veya şifre hatalı.";
                     return;
                 }
 
