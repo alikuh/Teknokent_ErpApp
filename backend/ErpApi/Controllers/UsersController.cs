@@ -15,11 +15,13 @@ public class UsersController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IConnectionMultiplexer _redis;
+    private readonly ILogger<UsersController> _logger;
 
-    public UsersController(AppDbContext context, IConnectionMultiplexer redis)
+    public UsersController(AppDbContext context, IConnectionMultiplexer redis, ILogger<UsersController> logger)
     {
         _context = context;
         _redis = redis;
+        _logger = logger;
     }
 
     public class RegisterRequest
@@ -60,6 +62,8 @@ public class UsersController : ControllerBase
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
+        _logger.LogInformation("Yeni kullanıcı kaydı oluşturuldu: {Username} (Id: {UserId})", user.Username, user.Id);
+
         return Ok(new { user.Id, user.Username });
     }
 
@@ -87,6 +91,8 @@ public class UsersController : ControllerBase
             {
                 var ipTtl = await db.KeyTimeToLiveAsync(ipFailKey);
                 int ipRemainingMinutes = ipTtl.HasValue ? (int)Math.Ceiling(ipTtl.Value.TotalMinutes) : (int)FailedAttemptLockout.TotalMinutes;
+                AppMetrics.FailedLoginLockoutsTotal.WithLabels("ip").Inc();
+                _logger.LogWarning("IP kilitlendi, login reddedildi: {ClientIp} (kullanıcı adı denenen: {Username})", clientIp, request.Username);
                 return StatusCode(429, $"Bu IP adresinden çok fazla başarısız deneme yapıldı. Lütfen {ipRemainingMinutes} dakika sonra tekrar deneyin.");
             }
 
@@ -97,6 +103,8 @@ public class UsersController : ControllerBase
             {
                 var ttl = await db.KeyTimeToLiveAsync(failKey);
                 int remainingMinutes = ttl.HasValue ? (int)Math.Ceiling(ttl.Value.TotalMinutes) : (int)FailedAttemptLockout.TotalMinutes;
+                AppMetrics.FailedLoginLockoutsTotal.WithLabels("user").Inc();
+                _logger.LogWarning("Kullanıcı kilitlendi, login reddedildi: {Username} (IP: {ClientIp})", request.Username, clientIp);
                 return StatusCode(429, $"Çok fazla başarısız deneme. Lütfen {remainingMinutes} dakika sonra tekrar deneyin.");
             }
         }
@@ -114,6 +122,8 @@ public class UsersController : ControllerBase
             {
                 await RegisterFailedAttemptAsync(db, failKey);
                 await RegisterFailedAttemptAsync(db, ipFailKey);
+                AppMetrics.LoginAttemptsTotal.WithLabels("failure").Inc();
+                _logger.LogWarning("Login başarısız (kullanıcı bulunamadı): {Username} (IP: {ClientIp})", request.Username, clientIp);
                 return Unauthorized("Kullanıcı adı veya şifre hatalı.");
             }
 
@@ -123,6 +133,8 @@ public class UsersController : ControllerBase
             {
                 await RegisterFailedAttemptAsync(db, failKey);
                 await RegisterFailedAttemptAsync(db, ipFailKey);
+                AppMetrics.LoginAttemptsTotal.WithLabels("failure").Inc();
+                _logger.LogWarning("Login başarısız (şifre hatalı): {Username} (IP: {ClientIp})", request.Username, clientIp);
                 return Unauthorized("Kullanıcı adı veya şifre hatalı.");
             }
 
@@ -139,6 +151,10 @@ public class UsersController : ControllerBase
             await db.KeyExpireAsync($"session:{sessionToken}", TimeSpan.FromMinutes(5));
 
             await db.KeyDeleteAsync(failKey);
+
+            AppMetrics.LoginAttemptsTotal.WithLabels("success").Inc();
+            AppMetrics.ActiveSessions.Inc();
+            _logger.LogInformation("Kullanıcı giriş yaptı: {Username} (Id: {UserId}, IP: {ClientIp})", user.Username, user.Id, clientIp);
 
             return Ok(new { token = sessionToken, username = user.Username });
         }
@@ -169,14 +185,25 @@ public class UsersController : ControllerBase
         try
         {
             var db = _redis.GetDatabase();
-            await db.KeyDeleteAsync($"session:{token}");
+            var sessionKey = $"session:{token}";
+            var sessionValues = await db.HashGetAsync(sessionKey, new RedisValue[] { "Username", "UserId" });
+            var username = sessionValues[0];
+            var sessionUserId = sessionValues[1];
+
+            bool deleted = await db.KeyDeleteAsync(sessionKey);
+            if (deleted)
+            {
+                AppMetrics.ActiveSessions.Dec();
+                _logger.LogInformation(
+                    "Kullanıcı çıkış yaptı: {Username} (Id: {UserId})",
+                    username.IsNullOrEmpty ? "(bilinmiyor)" : username.ToString(),
+                    sessionUserId.IsNullOrEmpty ? (int?)null : (int)sessionUserId);
+            }
 
             return Ok(new { message = "Çıkış yapıldı." });
         }
         catch (RedisException)
         {
-            // Session silinemedigi kesin degilse basari mesaji donmek yanlis
-            // olur (token sunucuda hala gecerli kalmis olabilir).
             return StatusCode(503, "Servis şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.");
         }
     }

@@ -1,0 +1,13 @@
+# Grafana'ya "bu klasördeki dashboard JSON dosyalarını otomatik yükle" diyen dosya.
+
+apiVersion: 1
+
+providers:
+  - name: "ERP Dashboards"
+    orgId: 1
+    folder: ""
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/provisioning/dashboards

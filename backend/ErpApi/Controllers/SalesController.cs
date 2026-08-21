@@ -13,11 +13,13 @@ public class SalesController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IConnectionMultiplexer _redis;
+    private readonly ILogger<SalesController> _logger;
 
-    public SalesController(AppDbContext context, IConnectionMultiplexer redis)
+    public SalesController(AppDbContext context, IConnectionMultiplexer redis, ILogger<SalesController> logger)
     {
         _context = context;
         _redis = redis;
+        _logger = logger;
     }
 
     public class CreateSaleRequest
@@ -72,6 +74,10 @@ public class SalesController : ControllerBase
 
         _context.Sales.Add(sale);
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Kullanıcı {UserId} satış oluşturdu: satış {SaleId}, ürün {ProductId}, adet {Quantity}, tutar {TotalPrice}",
+            userId, sale.Id, sale.ProductId, sale.Quantity, sale.TotalPrice);
 
         return CreatedAtAction(nameof(GetSales), new { id = sale.Id }, sale);
     }

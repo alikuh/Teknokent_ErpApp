@@ -13,11 +13,13 @@ public class ProductsController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IConnectionMultiplexer _redis;
+    private readonly ILogger<ProductsController> _logger;
 
-    public ProductsController(AppDbContext context, IConnectionMultiplexer redis)
+    public ProductsController(AppDbContext context, IConnectionMultiplexer redis, ILogger<ProductsController> logger)
     {
         _context = context;
         _redis = redis;
+        _logger = logger;
     }
 
     // GET: api/products
@@ -59,6 +61,8 @@ public class ProductsController : ControllerBase
         _context.Products.Add(product);
         await _context.SaveChangesAsync();
 
+        _logger.LogInformation("Kullanıcı {UserId} yeni ürün oluşturdu: {ProductId} - {ProductName}", userId, product.Id, product.Name);
+
         return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, product);
     }
 
@@ -83,6 +87,8 @@ public class ProductsController : ControllerBase
 
         await _context.SaveChangesAsync();
 
+        _logger.LogInformation("Kullanıcı {UserId} ürünü güncelledi: {ProductId} - {ProductName}", userId, existingProduct.Id, existingProduct.Name);
+
         return NoContent();
     }
 
@@ -101,6 +107,8 @@ public class ProductsController : ControllerBase
 
         _context.Products.Remove(product);
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Kullanıcı {UserId} ürünü sildi: {ProductId} - {ProductName}", userId, product.Id, product.Name);
 
         return NoContent();
     }
