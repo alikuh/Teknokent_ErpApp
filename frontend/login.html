@@ -2,114 +2,258 @@
 <html lang="tr">
 
 <head>
-    <meta charset="UTF-8">
-    <title>ERP - Giriş</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f4f4;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Giriş | ERP</title>
+	<style>
+		* {
+			box-sizing: border-box;
+		}
 
-        .login-box {
-            background: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            width: 300px;
-        }
+		body {
+			margin: 0;
+			min-height: 100vh;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: linear-gradient(135deg, #eef2f7 0%, #dde6f0 100%);
+			font-family: -apple-system, Segoe UI, Roboto, Tahoma, sans-serif;
+		}
 
-        h2 {
-            text-align: center;
-            color: #333;
-        }
+		.card {
+			background: #fff;
+			width: 340px;
+			padding: 38px 34px 30px;
+			border-radius: 14px;
+			box-shadow: 0 12px 30px rgba(31, 45, 61, 0.12);
+		}
 
-        input {
-            width: 100%;
-            padding: 10px;
-            margin: 8px 0;
-            box-sizing: border-box;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
+		.badge {
+			width: 46px;
+			height: 46px;
+			margin: 0 auto 16px;
+			border-radius: 12px;
+			background: linear-gradient(135deg, #3a6ea5, #2b5580);
+			color: #fff;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-weight: 700;
+			font-size: 15px;
+			letter-spacing: 0.5px;
+		}
 
-        button {
-            width: 100%;
-            padding: 10px;
-            background: #2c7be5;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
+		.card h1 {
+			font-size: 19px;
+			margin: 0 0 4px;
+			text-align: center;
+			color: #23282e;
+		}
 
-        button:hover {
-            background: #1a5cb8;
-        }
+		.subtitle {
+			text-align: center;
+			font-size: 13px;
+			color: #8a929c;
+			margin: 0 0 24px;
+		}
 
-        #message {
-            color: red;
-            text-align: center;
-            margin-top: 10px;
-            font-size: 14px;
-        }
-    </style>
+		label {
+			display: block;
+			font-size: 12px;
+			font-weight: 600;
+			color: #5a6572;
+			margin-bottom: 5px;
+		}
+
+		.field {
+			margin-bottom: 15px;
+		}
+
+		.input-wrap {
+			position: relative;
+		}
+
+		.input-wrap svg {
+			position: absolute;
+			left: 11px;
+			top: 50%;
+			transform: translateY(-50%);
+			width: 15px;
+			height: 15px;
+			color: #a3abb5;
+		}
+
+		input {
+			width: 100%;
+			padding: 10px 12px 10px 34px;
+			border: 1.5px solid #dde2e8;
+			border-radius: 8px;
+			font-size: 14px;
+			background: #fbfcfd;
+			transition: border-color .15s ease, background .15s ease;
+		}
+
+		input:focus {
+			outline: none;
+			border-color: #3a6ea5;
+			background: #fff;
+		}
+
+		.submit-btn {
+			width: 100%;
+			padding: 11px;
+			margin-top: 8px;
+			border: none;
+			border-radius: 8px;
+			background: #3a6ea5;
+			color: #fff;
+			font-size: 14px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: background .15s ease, transform .1s ease;
+		}
+
+		.submit-btn:hover {
+			background: #2f5c8a;
+		}
+
+		.submit-btn:active {
+			transform: translateY(1px);
+		}
+
+		.submit-btn:disabled {
+			background: #b3bcc6;
+			cursor: default;
+			transform: none;
+		}
+
+		.msg {
+			min-height: 16px;
+			text-align: center;
+			font-size: 13px;
+			margin-top: 12px;
+		}
+
+		.msg.err {
+			color: #c0392b;
+		}
+
+		.switch {
+			text-align: center;
+			font-size: 13px;
+			margin-top: 20px;
+			padding-top: 18px;
+			border-top: 1px solid #eef0f3;
+			color: #8a929c;
+		}
+
+		.switch a {
+			color: #3a6ea5;
+			text-decoration: none;
+			font-weight: 600;
+		}
+
+		.switch a:hover {
+			text-decoration: underline;
+		}
+	</style>
 </head>
 
 <body>
 
-    <div class="login-box">
-        <h2>ERP Girişi</h2>
-        <input type="text" id="username" placeholder="Kullanıcı adı">
-        <input type="password" id="password" placeholder="Şifre">
-        <button onclick="login()">Giriş Yap</button>
-        <p id="message"></p>
-        <p style="text-align: center; margin-top: 15px; font-size: 14px;">
-            Hesabın yok mu? <a href="register.html" style="color: #2c7be5; text-decoration: none;">Kayıt ol</a>
-        </p>
-    </div>
+	<div class="card">
+		<div class="badge">ERP</div>
+		<h1>Hesabına giriş yap</h1>
+		<p class="subtitle">Devam etmek için bilgilerini gir</p>
 
-    <script>
-        const API_URL = "http://localhost:5077/api";
+		<div class="field">
+			<label for="username">Kullanıcı adı</label>
+			<div class="input-wrap">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<circle cx="12" cy="8" r="4" />
+					<path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
+				</svg>
+				<input id="username" type="text" autocomplete="username">
+			</div>
+		</div>
 
-        async function login() {
-            const username = document.getElementById("username").value;
-            const password = document.getElementById("password").value;
-            const messageEl = document.getElementById("message");
+		<div class="field">
+			<label for="password">Şifre</label>
+			<div class="input-wrap">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<rect x="5" y="11" width="14" height="9" rx="2" />
+					<path d="M8 11V7a4 4 0 0 1 8 0v4" />
+				</svg>
+				<input id="password" type="password" autocomplete="current-password">
+			</div>
+		</div>
 
-            messageEl.textContent = "";
+		<button id="loginBtn" class="submit-btn">Giriş yap</button>
+		<div id="msg" class="msg"></div>
 
-            try {
-                const response = await fetch(`${API_URL}/users/login`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ username, password })
-                });
+		<div class="switch">
+			Hesabın yok mu? <a href="register.html">Kayıt ol</a>
+		</div>
+	</div>
 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    messageEl.textContent = errorText || "Kullanıcı adı veya şifre hatalı.";
-                    return;
-                }
+	<script>
+		var API_URL = "http://localhost:5077/api";
 
-                const data = await response.json();
+		var userInput = document.getElementById("username");
+		var passInput = document.getElementById("password");
+		var msgBox = document.getElementById("msg");
+		var loginBtn = document.getElementById("loginBtn");
 
-                sessionStorage.setItem("token", data.token);
-                sessionStorage.setItem("username", data.username);
+		function showMsg(text) {
+			msgBox.textContent = text;
+			msgBox.className = text ? "msg err" : "msg";
+		}
 
-                window.location.href = "products.html";
+		async function doLogin() {
+			var user = userInput.value.trim();
+			var pass = passInput.value;
 
-            } catch (error) {
-                messageEl.textContent = "Sunucuya bağlanılamadı.";
-                console.error(error);
-            }
-        }
-    </script>
+			showMsg("");
+
+			if (!user || !pass) {
+				showMsg("Kullanıcı adı ve şifreni gir.");
+				return;
+			}
+
+			loginBtn.disabled = true;
+			loginBtn.textContent = "Giriş yapılıyor...";
+
+			try {
+				var res = await fetch(API_URL + "/users/login", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ username: user, password: pass })
+				});
+
+				if (!res.ok) {
+					var errTxt = await res.text();
+					showMsg(errTxt || "Kullanıcı adı veya şifre hatalı.");
+					return;
+				}
+
+				var data = await res.json();
+				sessionStorage.setItem("token", data.token);
+				sessionStorage.setItem("username", data.username);
+				window.location.href = "products.html";
+			} catch (e) {
+				showMsg("Sunucuya ulaşılamıyor.");
+			} finally {
+				loginBtn.disabled = false;
+				loginBtn.textContent = "Giriş yap";
+			}
+		}
+
+		loginBtn.addEventListener("click", doLogin);
+
+		passInput.addEventListener("keydown", function (e) {
+			if (e.key === "Enter") doLogin();
+		});
+	</script>
 
 </body>
 

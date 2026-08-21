@@ -1,157 +1,273 @@
 <!DOCTYPE html>
 <html lang="tr">
-
 <head>
-    <meta charset="UTF-8">
-    <title>ERP - Kayıt Ol</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f4f4;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kayıt Ol | ERP</title>
+<style>
+	* { box-sizing: border-box; }
 
-        .register-box {
-            background: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            width: 300px;
-        }
+	body {
+		margin: 0;
+		min-height: 100vh;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: linear-gradient(135deg, #eef2f7 0%, #dde6f0 100%);
+		font-family: -apple-system, Segoe UI, Roboto, Tahoma, sans-serif;
+	}
 
-        h2 {
-            text-align: center;
-            color: #333;
-        }
+	.card {
+		background: #fff;
+		width: 340px;
+		padding: 38px 34px 30px;
+		border-radius: 14px;
+		box-shadow: 0 12px 30px rgba(31, 45, 61, 0.12);
+	}
 
-        input {
-            width: 100%;
-            padding: 10px;
-            margin: 8px 0;
-            box-sizing: border-box;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
+	.badge {
+		width: 46px;
+		height: 46px;
+		margin: 0 auto 16px;
+		border-radius: 12px;
+		background: linear-gradient(135deg, #3a6ea5, #2b5580);
+		color: #fff;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-weight: 700;
+		font-size: 15px;
+		letter-spacing: 0.5px;
+	}
 
-        button {
-            width: 100%;
-            padding: 10px;
-            background: #2ecc71;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
+	.card h1 {
+		font-size: 19px;
+		margin: 0 0 4px;
+		text-align: center;
+		color: #23282e;
+	}
 
-        button:hover {
-            background: #27ae60;
-        }
+	.subtitle {
+		text-align: center;
+		font-size: 13px;
+		color: #8a929c;
+		margin: 0 0 24px;
+	}
 
-        #message {
-            text-align: center;
-            margin-top: 10px;
-            font-size: 14px;
-        }
+	label {
+		display: block;
+		font-size: 12px;
+		font-weight: 600;
+		color: #5a6572;
+		margin-bottom: 5px;
+	}
 
-        .error {
-            color: red;
-        }
+	.field {
+		margin-bottom: 15px;
+	}
 
-        .success {
-            color: #27ae60;
-        }
+	.input-wrap {
+		position: relative;
+	}
 
-        .login-link {
-            text-align: center;
-            margin-top: 15px;
-            font-size: 14px;
-        }
+	.input-wrap svg {
+		position: absolute;
+		left: 11px;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 15px;
+		height: 15px;
+		color: #a3abb5;
+	}
 
-        .login-link a {
-            color: #2c7be5;
-            text-decoration: none;
-        }
-    </style>
+	input {
+		width: 100%;
+		padding: 10px 12px 10px 34px;
+		border: 1.5px solid #dde2e8;
+		border-radius: 8px;
+		font-size: 14px;
+		background: #fbfcfd;
+		transition: border-color .15s ease, background .15s ease;
+	}
+
+	input:focus {
+		outline: none;
+		border-color: #3a6ea5;
+		background: #fff;
+	}
+
+	.hint {
+		font-size: 11px;
+		color: #a3abb5;
+		margin-top: 4px;
+	}
+
+	.submit-btn {
+		width: 100%;
+		padding: 11px;
+		margin-top: 8px;
+		border: none;
+		border-radius: 8px;
+		background: #3a6ea5;
+		color: #fff;
+		font-size: 14px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: background .15s ease, transform .1s ease;
+	}
+
+	.submit-btn:hover {
+		background: #2f5c8a;
+	}
+
+	.submit-btn:active {
+		transform: translateY(1px);
+	}
+
+	.submit-btn:disabled {
+		background: #b3bcc6;
+		cursor: default;
+		transform: none;
+	}
+
+	.msg {
+		min-height: 16px;
+		text-align: center;
+		font-size: 13px;
+		margin-top: 12px;
+	}
+
+	.msg.err { color: #c0392b; }
+	.msg.ok { color: #2c7a4b; }
+
+	.switch {
+		text-align: center;
+		font-size: 13px;
+		margin-top: 20px;
+		padding-top: 18px;
+		border-top: 1px solid #eef0f3;
+		color: #8a929c;
+	}
+
+	.switch a {
+		color: #3a6ea5;
+		text-decoration: none;
+		font-weight: 600;
+	}
+
+	.switch a:hover {
+		text-decoration: underline;
+	}
+</style>
 </head>
-
 <body>
 
-    <div class="register-box">
-        <h2>Kayıt Ol</h2>
-        <input type="text" id="username" placeholder="Kullanıcı adı">
-        <input type="password" id="password" placeholder="Şifre">
-        <input type="password" id="confirmPassword" placeholder="Şifre (tekrar)">
-        <button onclick="register()">Kayıt Ol</button>
-        <p id="message"></p>
-        <div class="login-link">
-            Zaten hesabın var mı? <a href="login.html">Giriş yap</a>
-        </div>
-    </div>
+	<div class="card">
+		<div class="badge">ERP</div>
+		<h1>Yeni hesap oluştur</h1>
+		<p class="subtitle">Birkaç adımda hazırsın</p>
 
-    <script>
-        const API_URL = "http://localhost:5077/api";
+		<div class="field">
+			<label for="username">Kullanıcı adı</label>
+			<div class="input-wrap">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+				<input id="username" type="text" autocomplete="username">
+			</div>
+		</div>
 
-        async function register() {
-            const username = document.getElementById("username").value.trim();
-            const password = document.getElementById("password").value;
-            const confirmPassword = document.getElementById("confirmPassword").value;
-            const messageEl = document.getElementById("message");
+		<div class="field">
+			<label for="password">Şifre</label>
+			<div class="input-wrap">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+				<input id="password" type="password" autocomplete="new-password">
+			</div>
+			<div class="hint">En az 6 karakter</div>
+		</div>
 
-            messageEl.textContent = "";
-            messageEl.className = "";
+		<div class="field">
+			<label for="confirm">Şifre (tekrar)</label>
+			<div class="input-wrap">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+				<input id="confirm" type="password" autocomplete="new-password">
+			</div>
+		</div>
 
-            if (!username || !password) {
-                messageEl.textContent = "Kullanıcı adı ve şifre boş olamaz.";
-                messageEl.className = "error";
-                return;
-            }
+		<button id="registerBtn" class="submit-btn">Kayıt ol</button>
+		<div id="msg" class="msg"></div>
 
-            if (password.length < 6) {
-                messageEl.textContent = "Şifre en az 6 karakter olmalı.";
-                messageEl.className = "error";
-                return;
-            }
+		<div class="switch">
+			Zaten hesabın var mı? <a href="login.html">Giriş yap</a>
+		</div>
+	</div>
 
-            if (password !== confirmPassword) {
-                messageEl.textContent = "Şifreler eşleşmiyor.";
-                messageEl.className = "error";
-                return;
-            }
+	<script>
+		var API_URL = "http://localhost:5077/api";
 
-            try {
-                const response = await fetch(`${API_URL}/users/register`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ username, password })
-                });
+		var userInput = document.getElementById("username");
+		var passInput = document.getElementById("password");
+		var confirmInput = document.getElementById("confirm");
+		var msgBox = document.getElementById("msg");
+		var registerBtn = document.getElementById("registerBtn");
 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    messageEl.textContent = errorText || "Kayıt sırasında bir hata oluştu.";
-                    messageEl.className = "error";
-                    return;
-                }
+		function showMsg(text, ok) {
+			msgBox.textContent = text;
+			msgBox.className = text ? ("msg " + (ok ? "ok" : "err")) : "msg";
+		}
 
-                messageEl.textContent = "Kayıt başarılı! Giriş sayfasına yönlendiriliyorsun...";
-                messageEl.className = "success";
+		async function doRegister() {
+			var user = userInput.value.trim();
+			var pass = passInput.value;
+			var confirm = confirmInput.value;
 
-                setTimeout(() => {
-                    window.location.href = "login.html";
-                }, 1500);
+			showMsg("");
 
-            } catch (error) {
-                messageEl.textContent = "Sunucuya bağlanılamadı.";
-                messageEl.className = "error";
-                console.error(error);
-            }
-        }
-    </script>
+			if (!user || !pass) {
+				showMsg("Kullanıcı adı ve şifre boş olamaz.");
+				return;
+			}
+			if (pass.length < 6) {
+				showMsg("Şifre en az 6 karakter olmalı.");
+				return;
+			}
+			if (pass !== confirm) {
+				showMsg("Şifreler eşleşmiyor.");
+				return;
+			}
+
+			registerBtn.disabled = true;
+			registerBtn.textContent = "Kaydediliyor...";
+
+			try {
+				var res = await fetch(API_URL + "/users/register", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ username: user, password: pass })
+				});
+
+				if (!res.ok) {
+					var errTxt = await res.text();
+					showMsg(errTxt || "Kayıt sırasında bir hata oluştu.");
+					return;
+				}
+
+				showMsg("Kayıt tamam, giriş sayfasına yönlendiriliyorsun...", true);
+				setTimeout(function () {
+					window.location.href = "login.html";
+				}, 1400);
+			} catch (e) {
+				showMsg("Sunucuya ulaşılamıyor.");
+			} finally {
+				registerBtn.disabled = false;
+				registerBtn.textContent = "Kayıt ol";
+			}
+		}
+
+		registerBtn.addEventListener("click", doRegister);
+
+		confirmInput.addEventListener("keydown", function (e) {
+			if (e.key === "Enter") doRegister();
+		});
+	</script>
 
 </body>
-
 </html>

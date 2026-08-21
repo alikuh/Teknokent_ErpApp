@@ -3,143 +3,442 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ERP - Ürünler</title>
     <style>
+        * { box-sizing: border-box; }
+
         body {
-            font-family: Arial, sans-serif;
-            background: #f4f4f4;
+            font-family: -apple-system, Segoe UI, Roboto, Tahoma, sans-serif;
+            background: linear-gradient(135deg, #eef2f7 0%, #dde6f0 100%);
             margin: 0;
-            padding: 20px;
+            padding: 24px;
+            min-height: 100vh;
+            color: #23282e;
+        }
+
+        .page {
+            max-width: 1100px;
+            margin: 0 auto;
         }
 
         .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: white;
-            padding: 15px 20px;
-            border-radius: 8px;
+            background: #fff;
+            padding: 14px 22px;
+            border-radius: 12px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 20px rgba(31, 45, 61, 0.08);
         }
 
-        .topbar a {
-            margin-left: 15px;
-            color: #2c7be5;
-            text-decoration: none;
-        }
-
-        .container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-
-        h2 {
-            color: #333;
-        }
-
-        .form-row {
+        .brand {
             display: flex;
+            align-items: center;
             gap: 10px;
+            font-weight: 700;
+            color: #23282e;
+            font-size: 14px;
+        }
+
+        .brand .badge {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #3a6ea5, #2b5580);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .topbar nav a {
+            margin-left: 18px;
+            color: #5a6572;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            padding-bottom: 4px;
+            border-bottom: 2px solid transparent;
+        }
+
+        .topbar nav a:hover {
+            color: #3a6ea5;
+        }
+
+        .topbar nav a.active {
+            color: #3a6ea5;
+            border-bottom-color: #3a6ea5;
+        }
+
+        .topbar .user {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 13px;
+            color: #8a929c;
+        }
+
+        .panel {
+            background: #fff;
+            padding: 22px 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(31, 45, 61, 0.08);
             margin-bottom: 20px;
+        }
+
+        .panel-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 16px;
         }
 
-        .form-row input {
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            flex: 1;
-            min-width: 120px;
+        .panel-head h2 {
+            color: #23282e;
+            font-size: 17px;
+            margin: 0;
         }
 
-        .form-row button {
-            padding: 8px 20px;
-            background: #2c7be5;
+        .search-box {
+            position: relative;
+        }
+
+        .search-box svg {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 14px;
+            height: 14px;
+            color: #a3abb5;
+        }
+
+        .search-box input {
+            padding: 8px 12px 8px 32px;
+            border: 1.5px solid #dde2e8;
+            border-radius: 8px;
+            font-size: 13px;
+            width: 220px;
+            background: #fbfcfd;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #3a6ea5;
+            background: #fff;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            align-items: end;
+        }
+
+        .form-grid label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #5a6572;
+            margin-bottom: 5px;
+        }
+
+        .form-grid input {
+            width: 100%;
+            padding: 9px 11px;
+            border: 1.5px solid #dde2e8;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #fbfcfd;
+            transition: border-color .15s ease, background .15s ease;
+        }
+
+        .form-grid input:focus {
+            outline: none;
+            border-color: #3a6ea5;
+            background: #fff;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        button {
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            padding: 9px 20px;
+            background: #3a6ea5;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
             cursor: pointer;
+            transition: background .15s ease;
+        }
+
+        .btn-primary:hover {
+            background: #2f5c8a;
+        }
+
+        .btn-ghost {
+            padding: 9px 16px;
+            background: #eef0f3;
+            color: #5a6572;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .btn-ghost:hover {
+            background: #e3e6ea;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 560px;
         }
 
-        th,
-        td {
+        th, td {
             text-align: left;
-            padding: 10px;
-            border-bottom: 1px solid #eee;
+            padding: 11px 10px;
+            border-bottom: 1px solid #eef0f3;
+            font-size: 14px;
         }
 
         th {
-            background: #fafafa;
+            background: #fafbfc;
+            color: #5a6572;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
         }
 
-        .low-stock {
-            color: #e63946;
-            font-weight: bold;
+        tbody tr:hover {
+            background: #fafbfc;
+        }
+
+        .stock-pill {
+            display: inline-block;
+            padding: 2px 9px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            background: #eaf3ee;
+            color: #2c7a4b;
+        }
+
+        .stock-pill.low {
+            background: #fbeaea;
+            color: #c0392b;
+        }
+
+        .empty-row td, .loading-row td {
+            text-align: center;
+            padding: 30px 10px;
+            color: #a3abb5;
+            font-size: 14px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 6px;
         }
 
         .actions button {
-            margin-right: 5px;
-            padding: 5px 10px;
+            padding: 6px 12px;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
             cursor: pointer;
+            transition: opacity .15s ease;
         }
 
-        .btn-delete {
-            background: #e63946;
-            color: white;
+        .actions button:hover {
+            opacity: 0.85;
         }
 
-        .btn-sell {
-            background: #2ecc71;
-            color: white;
+        .btn-edit { background: #eef2f7; color: #3a6ea5; }
+        .btn-delete { background: #c0392b; color: white; }
+        .btn-sell { background: #2c7a4b; color: white; }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(23, 30, 38, 0.45);
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            background: #fff;
+            width: 300px;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal h3 {
+            margin: 0 0 6px;
+            font-size: 16px;
+            color: #23282e;
+        }
+
+        .modal p {
+            margin: 0 0 16px;
+            font-size: 13px;
+            color: #8a929c;
+        }
+
+        .modal input {
+            width: 100%;
+            padding: 9px 11px;
+            border: 1.5px solid #dde2e8;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .modal input:focus {
+            outline: none;
+            border-color: #3a6ea5;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .modal .err {
+            color: #c0392b;
+            font-size: 12px;
+            margin: -10px 0 12px;
+            min-height: 14px;
         }
     </style>
 </head>
 
 <body>
 
-    <div class="topbar">
-        <div>Hoş geldin, <strong id="usernameDisplay"></strong></div>
-        <div>
-            <a href="dashboard.html">Dashboard</a>
-            <a href="products.html">Ürünler</a>
-            <a href="#" onclick="logout()">Çıkış Yap</a>
+    <div class="page">
+
+        <div class="topbar">
+            <div class="brand">
+                <span class="badge">ERP</span>
+            </div>
+            <nav style="flex:1; margin-left: 26px;">
+                <a href="dashboard.html">Dashboard</a>
+                <a href="products.html" class="active">Ürünler</a>
+            </nav>
+            <div class="user">
+                <span>Hoş geldin, <strong id="usernameDisplay" style="color:#23282e;"></strong></span>
+                <a href="#" onclick="logout()" style="color:#c0392b; font-weight:600; text-decoration:none;">Çıkış Yap</a>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2 id="formTitle" style="margin-bottom: 16px;">Yeni Ürün Ekle</h2>
+            <div class="form-grid">
+                <div>
+                    <label>Ürün adı</label>
+                    <input type="text" id="name" placeholder="Örn. Klavye">
+                </div>
+                <div>
+                    <label>Açıklama</label>
+                    <input type="text" id="description" placeholder="Opsiyonel">
+                </div>
+                <div>
+                    <label>Fiyat</label>
+                    <input type="number" id="price" placeholder="0.00" step="0.01">
+                </div>
+                <div>
+                    <label>Stok adedi</label>
+                    <input type="number" id="stockQuantity" placeholder="0">
+                </div>
+                <div class="form-actions">
+                    <button id="submitButton" class="btn-primary" onclick="addProduct()">Ekle</button>
+                    <button id="cancelButton" class="btn-ghost" onclick="cancelEdit()" style="display:none;">İptal</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-head">
+                <h2>Ürün Listesi</h2>
+                <div class="search-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                    <input type="text" id="searchInput" placeholder="Ürün ara..." oninput="renderProducts()">
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ad</th>
+                            <th>Açıklama</th>
+                            <th>Fiyat</th>
+                            <th>Stok</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productTableBody">
+                        <tr class="loading-row"><td colspan="5">Yükleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="overlay" id="sellOverlay">
+        <div class="modal">
+            <h3>Ürün sat</h3>
+            <p id="sellProductName"></p>
+            <input type="number" id="sellQuantity" placeholder="Kaç adet?" min="1">
+            <div class="err" id="sellError"></div>
+            <div class="modal-actions">
+                <button class="btn-ghost" onclick="closeSellModal()">Vazgeç</button>
+                <button class="btn-primary" onclick="confirmSell()">Sat</button>
+            </div>
         </div>
     </div>
 
-    <div class="container">
-        <h2 id="formTitle">Yeni Ürün Ekle</h2>
-        <div class="form-row">
-            <input type="text" id="name" placeholder="Ürün adı">
-            <input type="text" id="description" placeholder="Açıklama (opsiyonel)">
-            <input type="number" id="price" placeholder="Fiyat" step="0.01">
-            <input type="number" id="stockQuantity" placeholder="Stok adedi">
-            <button id="submitButton" onclick="addProduct()">Ekle</button>
-            <button id="cancelButton" onclick="cancelEdit()" style="display:none; background:#888;">İptal</button>
+    <div class="overlay" id="deleteOverlay">
+        <div class="modal">
+            <h3>Ürünü sil</h3>
+            <p id="deleteProductName">Bu ürünü silmek istediğine emin misin?</p>
+            <div class="modal-actions">
+                <button class="btn-ghost" onclick="closeDeleteModal()">Vazgeç</button>
+                <button class="btn-primary" style="background:#c0392b;" onclick="confirmDelete()">Sil</button>
+            </div>
         </div>
-
-        <h2>Ürün Listesi</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Ad</th>
-                    <th>Açıklama</th>
-                    <th>Fiyat</th>
-                    <th>Stok</th>
-                    <th>İşlemler</th>
-                </tr>
-            </thead>
-            <tbody id="productTableBody"></tbody>
-        </table>
     </div>
 
     <script>
@@ -158,34 +457,52 @@
             window.location.href = "login.html";
         }
 
+        let allProducts = [];
+        let editingProductId = null;
+        let pendingSellId = null;
+        let pendingDeleteId = null;
+
         async function loadProducts() {
             const response = await fetch(`${API_URL}/products`, {
                 headers: { "Authorization": token }
             });
-            const products = await response.json();
+            allProducts = await response.json();
+            renderProducts();
+        }
 
+        function renderProducts() {
             const tbody = document.getElementById("productTableBody");
+            const query = document.getElementById("searchInput").value.trim().toLowerCase();
+
+            const visible = query
+                ? allProducts.filter(p => p.name.toLowerCase().includes(query) || (p.description ?? "").toLowerCase().includes(query))
+                : allProducts;
+
             tbody.innerHTML = "";
 
-            products.forEach(p => {
+            if (visible.length === 0) {
+                tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${allProducts.length === 0 ? "Henüz ürün eklenmedi." : "Aramayla eşleşen ürün yok."}</td></tr>`;
+                return;
+            }
+
+            visible.forEach(p => {
                 const row = document.createElement("tr");
-                const stockClass = p.stockQuantity < 10 ? "low-stock" : "";
+                const isLow = p.stockQuantity < 10;
 
                 row.innerHTML = `
                     <td>${p.name}</td>
                     <td>${p.description ?? ""}</td>
                     <td>${p.price.toFixed(2)} TL</td>
-                    <td class="${stockClass}">${p.stockQuantity}</td>
+                    <td><span class="stock-pill ${isLow ? "low" : ""}">${p.stockQuantity}</span></td>
                     <td class="actions">
-                        <button class="btn-sell" onclick="sellProduct(${p.id})">Sat</button>
+                        <button class="btn-sell" onclick="openSellModal(${p.id})">Sat</button>
                         <button class="btn-edit" onclick='startEdit(${JSON.stringify(p)})'>Düzenle</button>
-                        <button class="btn-delete" onclick="deleteProduct(${p.id})">Sil</button>
+                        <button class="btn-delete" onclick="openDeleteModal(${p.id})">Sil</button>
                     </td>
                     `;
                 tbody.appendChild(row);
             });
         }
-        let editingProductId = null;
 
         function startEdit(product) {
             editingProductId = product.id;
@@ -242,6 +559,7 @@
             cancelEdit();
             loadProducts();
         }
+
         async function addProduct() {
             const name = document.getElementById("name").value;
             const description = document.getElementById("description").value;
@@ -267,33 +585,72 @@
             loadProducts();
         }
 
-        async function deleteProduct(id) {
-            if (!confirm("Bu ürünü silmek istediğine emin misin?")) return;
-            await fetch(`${API_URL}/products/${id}`, {
+        function openDeleteModal(id) {
+            pendingDeleteId = id;
+            const product = allProducts.find(p => p.id === id);
+            document.getElementById("deleteProductName").textContent =
+                product ? `"${product.name}" ürününü silmek istediğine emin misin?` : "Bu ürünü silmek istediğine emin misin?";
+            document.getElementById("deleteOverlay").classList.add("open");
+        }
+
+        function closeDeleteModal() {
+            pendingDeleteId = null;
+            document.getElementById("deleteOverlay").classList.remove("open");
+        }
+
+        async function confirmDelete() {
+            if (pendingDeleteId === null) return;
+            await fetch(`${API_URL}/products/${pendingDeleteId}`, {
                 method: "DELETE",
                 headers: { "Authorization": token }
             });
+            closeDeleteModal();
             loadProducts();
         }
 
-        async function sellProduct(id) {
-            const quantity = prompt("Kaç adet satıldı?");
-            if (!quantity || isNaN(quantity)) return;
+        function openSellModal(id) {
+            pendingSellId = id;
+            const product = allProducts.find(p => p.id === id);
+            document.getElementById("sellProductName").textContent = product ? `"${product.name}" için satılan adet` : "";
+            document.getElementById("sellQuantity").value = "";
+            document.getElementById("sellError").textContent = "";
+            document.getElementById("sellOverlay").classList.add("open");
+            document.getElementById("sellQuantity").focus();
+        }
+
+        function closeSellModal() {
+            pendingSellId = null;
+            document.getElementById("sellOverlay").classList.remove("open");
+        }
+
+        async function confirmSell() {
+            const quantity = document.getElementById("sellQuantity").value;
+            const errEl = document.getElementById("sellError");
+
+            if (!quantity || isNaN(quantity) || parseInt(quantity) <= 0) {
+                errEl.textContent = "Geçerli bir adet gir.";
+                return;
+            }
 
             const response = await fetch(`${API_URL}/sales`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": token },
-                body: JSON.stringify({ productId: id, quantity: parseInt(quantity) })
+                body: JSON.stringify({ productId: pendingSellId, quantity: parseInt(quantity) })
             });
 
             if (!response.ok) {
                 const errorText = await response.text();
-                alert("Hata: " + errorText);
+                errEl.textContent = errorText || "Satış sırasında bir hata oluştu.";
                 return;
             }
 
+            closeSellModal();
             loadProducts();
         }
+
+        document.getElementById("sellQuantity").addEventListener("keydown", function (e) {
+            if (e.key === "Enter") confirmSell();
+        });
 
         loadProducts();
     </script>
