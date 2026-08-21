@@ -210,6 +210,62 @@
             color: #a3abb5;
             font-size: 13px;
         }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(23, 30, 38, 0.45);
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        .overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            background: #fff;
+            width: 320px;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .modal h3 {
+            margin: 0 0 8px;
+            font-size: 16px;
+            color: #23282e;
+        }
+
+        .modal p {
+            margin: 0 0 20px;
+            font-size: 13px;
+            color: #8a929c;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            padding: 9px 24px;
+            background: #3a6ea5;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background .15s ease;
+        }
+
+        .btn-primary:hover {
+            background: #2f5c8a;
+        }
     </style>
 </head>
 
@@ -323,6 +379,16 @@
 
     </div>
 
+    <div class="overlay" id="sessionExpiredOverlay">
+        <div class="modal">
+            <h3>Oturum süresi doldu</h3>
+            <p>Güvenliğin için oturumun sona erdi. Devam etmek için tekrar giriş yapmalısın.</p>
+            <div class="modal-actions">
+                <button class="btn-primary" onclick="goToLoginAfterExpiry()">Tamam</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_URL = "http://localhost:5077/api";
         const token = sessionStorage.getItem("token");
@@ -334,15 +400,51 @@
 
         document.getElementById("usernameDisplay").textContent = username;
 
-        function logout() {
+        async function logout() {
+            try {
+                // Sunucu tarafindaki session'i da iptal et; aksi halde token
+                // TTL'i dolana kadar gecerli kalmaya devam eder.
+                await fetch(`${API_URL}/users/logout`, {
+                    method: "POST",
+                    headers: { "Authorization": token }
+                });
+            } catch (e) {
+                // Sunucuya ulasilamasa bile istemci tarafinda cikis yapilmali.
+            }
             sessionStorage.clear();
             window.location.href = "login.html";
         }
 
+        let sessionExpiredShown = false;
+
+        function goToLoginAfterExpiry() {
+            sessionStorage.clear();
+            window.location.href = "login.html";
+        }
+
+        // Tum API cagrilarinin ortak giris noktasi: token AbsoluteExpiry'yi
+        // asip veya 5 dk hareketsizlik sonucu gecersiz kalip backend 401
+        // donerse, tek seferlik bir uyari popup'i gosterip kullanici "Tamam"a
+        // basana kadar bekletir, sonra login ekranina yonlendirir.
+        async function authFetch(url, options = {}) {
+            const opts = Object.assign({}, options);
+            opts.headers = Object.assign({}, options.headers, { "Authorization": token });
+            const response = await fetch(url, opts);
+
+            if (response.status === 401) {
+                if (!sessionExpiredShown) {
+                    sessionExpiredShown = true;
+                    document.getElementById("sessionExpiredOverlay").classList.add("open");
+                }
+                return null;
+            }
+
+            return response;
+        }
+
         async function loadSummary() {
-            const response = await fetch(`${API_URL}/dashboard/summary`, {
-                headers: { "Authorization": token }
-            });
+            const response = await authFetch(`${API_URL}/dashboard/summary`);
+            if (!response) return;
             const data = await response.json();
 
             document.getElementById("dailySales").textContent = data.dailySales.toFixed(2) + " TL";
@@ -354,9 +456,8 @@
         }
 
         async function loadSalesChart() {
-            const response = await fetch(`${API_URL}/dashboard/sales-by-day?days=7`, {
-                headers: { "Authorization": token }
-            });
+            const response = await authFetch(`${API_URL}/dashboard/sales-by-day?days=7`);
+            if (!response) return;
             const data = await response.json();
 
             const labels = data.map(d => d.date);
@@ -387,9 +488,8 @@
         }
 
         async function loadTopProducts() {
-            const response = await fetch(`${API_URL}/dashboard/top-products?count=5`, {
-                headers: { "Authorization": token }
-            });
+            const response = await authFetch(`${API_URL}/dashboard/top-products?count=5`);
+            if (!response) return;
             const data = await response.json();
 
             const tbody = document.getElementById("topProductsBody");
@@ -408,9 +508,8 @@
         }
 
         async function loadSalesHistory() {
-            const response = await fetch(`${API_URL}/sales`, {
-                headers: { "Authorization": token }
-            });
+            const response = await authFetch(`${API_URL}/sales`);
+            if (!response) return;
             const sales = await response.json();
 
             sales.sort((a, b) => new Date(b.soldAt) - new Date(a.soldAt));
