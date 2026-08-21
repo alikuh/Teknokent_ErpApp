@@ -28,6 +28,10 @@ public static class PasswordHasher
     public static bool VerifyPassword(string password, string storedHash, byte[] salt)
     {
         string hashOfInput = HashPassword(password, salt);
-        return hashOfInput == storedHash;
+
+        byte[] inputBytes = Convert.FromBase64String(hashOfInput);
+        byte[] storedBytes = Convert.FromBase64String(storedHash);
+
+        return CryptographicOperations.FixedTimeEquals(inputBytes, storedBytes);
     }
 }
