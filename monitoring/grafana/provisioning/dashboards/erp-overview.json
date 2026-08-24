@@ -5,18 +5,32 @@
   "version": 1,
   "editable": true,
   "timezone": "browser",
-  "time": { "from": "now-1h", "to": "now" },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "refresh": "5s",
   "panels": [
     {
       "id": 1,
       "title": "Aktif Oturum Sayısı",
       "type": "stat",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "erp_active_sessions",
           "legendFormat": "aktif oturum"
         }
@@ -26,11 +40,22 @@
       "id": 2,
       "title": "Login Denemeleri (başarılı / başarısız)",
       "type": "timeseries",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 0 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 18,
+        "x": 6,
+        "y": 0
+      },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum by (result) (rate(erp_login_attempts_total[1m]))",
           "legendFormat": "{{result}}"
         }
@@ -40,11 +65,22 @@
       "id": 3,
       "title": "Endpoint Bazlı İstek Oranı",
       "type": "timeseries",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum by (method, code, action) (label_replace(rate(http_requests_received_total{controller=\"Dashboard\"}[1m]), \"action\", \"Dashboard'a bakma\", \"action\", \".*\") or rate(http_requests_received_total{controller!=\"Dashboard\"}[1m]))",
           "legendFormat": "{{method}} {{action}} ({{code}})"
         }
@@ -54,8 +90,16 @@
       "id": 4,
       "title": "Audit Olay Akışı (kim ne yaptı)",
       "type": "logs",
-      "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 16 },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
       "options": {
         "showTime": true,
         "wrapLogMessage": true,
@@ -63,27 +107,115 @@
       },
       "targets": [
         {
-          "datasource": { "type": "loki", "uid": "loki" },
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
           "expr": "{app=\"erp-api\"} | json | line_format \"[{{.level}}] {{.Message}}\""
         }
       ]
     },
     {
       "id": 5,
-      "title": "Kullanıcı Bazında İşlem Sayısı (son 1 saat) — sapan kullanıcıyı yakalamak için",
+      "title": "Kullanıcı Bazında İşlem Sayısı (son 1 saat) ",
       "type": "bargauge",
-      "datasource": { "type": "loki", "uid": "loki" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 26 },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
       "options": {
         "orientation": "horizontal",
         "displayMode": "gradient",
-        "reduceOptions": { "calcs": ["lastNotNull"] }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "loki", "uid": "loki" },
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
           "expr": "sum by (UserId) (count_over_time({app=\"erp-api\"} | json | UserId != \"\" [1h]))",
           "legendFormat": "Kullanıcı {{UserId}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Backend CPU Kullanımı",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 34
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "rate(process_cpu_seconds_total{job=\"erp-api\"}[1m]) * 100",
+          "legendFormat": "CPU %"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Backend Bellek Kullanımı",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 34
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "process_working_set_bytes{job=\"erp-api\"}",
+          "legendFormat": "Working Set (RSS)"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "dotnet_total_memory_bytes{job=\"erp-api\"}",
+          "legendFormat": "GC Managed Heap"
         }
       ]
     }

@@ -33,8 +33,15 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(
-    ConnectionMultiplexer.Connect("localhost:6379"));
-    
+    // allowAdmin=true: SessionExpiryWatcher'ın "notify-keyspace-events" ayarını
+    // CONFIG SET ile açabilmesi için gerekli (StackExchange.Redis bu tür yönetimsel
+    // komutları varsayılan olarak, yanlışlıkla çalıştırılmasın diye kapalı tutar).
+    ConnectionMultiplexer.Connect("localhost:6379,allowAdmin=true"));
+
+// Oturum TTL'den (hareketsizlik/mutlak süre) kendiliğinden silindiğinde de audit log
+// yazsın ve erp_active_sessions sayacını düşürsün diye - bkz. Services/SessionExpiryWatcher.cs
+builder.Services.AddHostedService<ErpApi.Services.SessionExpiryWatcher>();
+
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();

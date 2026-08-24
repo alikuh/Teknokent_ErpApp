@@ -1,5 +1,4 @@
 # Loki'nin minimal "tek node, diskte sakla" yapılandırması.
-# Geliştirme ortamı için resmi örnek konfigürasyon baz alınmıştır.
 
 auth_enabled: false
 
@@ -21,14 +20,21 @@ common:
 
 schema_config:
   configs:
-    - from: 2020-10-24
-      store: boltdb-shipper
+    - from: 2024-01-01
+      store: tsdb
       object_store: filesystem
-      schema: v11
+      schema: v13
       index:
         prefix: index_
         period: 24h
+compactor:
+  working_directory: /loki/compactor
+  compaction_interval: 10m
+  retention_enabled: true
+  retention_delete_delay: 2h
+  delete_request_store: filesystem
 
 limits_config:
   reject_old_samples: true
   reject_old_samples_max_age: 168h
+  retention_period: 168h  

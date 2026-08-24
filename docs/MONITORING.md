@@ -56,6 +56,7 @@ monitoring/
             └── erp-overview.json       # Hazır "ERP Genel Bakış" dashboard'u (5 panel)
 
 backend/ErpApi/Services/AppMetrics.cs   # Yeni: uygulamaya özel Prometheus metrik tanımları
+backend/ErpApi/Services/SessionExpiryWatcher.cs  # Yeni: TTL'den kendiliğinden biten oturumları da audit'e yazar
 
 docs/MONITORING.md                       # Bu dosya
 ```
@@ -275,6 +276,41 @@ Prometheus'un belleğini/diskini şişirir. Kişiye özel bilgi bunun yerine **L
   sadece `Username` vardı, kullanıcı bazlı analiz için tutarlılık amacıyla sonradan `UserId`
   de eklendi — bkz. §9), `ActiveSessions.Dec()` ve audit log.
 
+### 7.4.1 `Services/SessionExpiryWatcher.cs` — TTL'den kendiliğinden biten oturumlar (yeni)
+
+**Sorun:** Bir kullanıcı hiçbir işlem yapmadan `session:{token}` Redis'te TTL'den (5 dk
+hareketsizlik veya 2 saat mutlak sınır) kendiliğinden silinirse, hiçbir kod tetiklenmiyordu —
+ne "çıkış yaptı" audit logu yazılıyordu, ne de `erp_active_sessions` sayacı düşürülüyordu
+(bu ikincisi zamanla sayacın gerçek değerden sapmasına yol açan ayrı bir hataydı).
+
+**Çözüm:** Redis'in **keyspace notification** özelliği kullanıldı — bir anahtar TTL'den
+silindiğinde Redis, `__keyevent@0__:expired` pub/sub kanalına o anahtarın adını yayınlar.
+`SessionExpiryWatcher` adında yeni bir `IHostedService` bu kanalı dinliyor:
+
+1. Uygulama başlarken `CONFIG SET notify-keyspace-events Ex` ile bu özelliği açıyor (varsayılan
+   kapalı gelir). Bu komut "admin" yetkisi istediği için Redis bağlantı dizesine
+   `allowAdmin=true` eklendi (`Program.cs`).
+2. `session:*` deseniyle eşleşen bir "expired" olayı geldiğinde, token'ı çıkarıp
+   `session-meta:{token}` anahtarından `UserId`/`Username`'i okuyor.
+3. **Neden ayrı bir `session-meta:{token}` anahtarı var?** "expired" olayı geldiğinde asıl
+   anahtarın (`session:{token}`) değeri Redis'te artık yok — sadece silindiği bilgisi geliyor.
+   Bu yüzden `Login` sırasında, aynı bilgiyi (`UserId`, `Username`) daha uzun ömürlü (3 saat,
+   mutlak 2 saatlik oturum sınırından güvenli şekilde uzun) bir kopya olarak da yazıyoruz;
+   `SessionExpiryWatcher` bu kopyadan okuyup sonra onu da temizliyor. Açık `Logout` çağrısı da
+   kendi `session-meta` kopyasını temizliyor ki 3 saat boyunca ortada gereksiz kalmasın.
+4. Bulduğu bilgiyle `_logger.LogInformation("Kullanıcı oturumu zaman aşımına uğradı (otomatik
+   çıkış): ...")` yazıyor ve `AppMetrics.ActiveSessions.Dec()` çağırıyor.
+
+**Neden çift log/çift sayaç düşürme riski yok:** Açık `Logout` çağrısı `KeyDeleteAsync` ile
+siliyor — Redis bunu `del` olayı olarak yayınlar, `expired` olarak değil.
+`SessionExpiryWatcher` sadece `expired` kanalını dinlediği için, açık logout'ta tekrar
+tetiklenmiyor.
+
+**Dayanıklılık:** `CONFIG SET` bir sebepten başarısız olursa (örn. bazı yönetilen Redis
+servisleri admin komutlarını kapatır), `try/catch` ile sadece bir `LogWarning` yazılıp bu
+özellik pasif kalıyor — uygulamanın geri kalanı etkilenmiyor. Bu, geliştirme sırasında canlı
+olarak test edilip doğrulandı (bkz. §9).
+
 ### 7.5 `Controllers/ProductsController.cs`, `SalesController.cs`
 
 Aynı desen: constructor'a `ILogger` eklendi, `Create`/`Update`/`Delete` (ve `CreateSale`)
@@ -341,7 +377,15 @@ düzelttiğimiz gerçek sorunlar — ileride benzer bir şey kurarken işinize y
    sürecinin durdurulması** → arka planda başlattığımız test süreçlerini `fuser -k` ile
    kapatırken, kullanıcının kendi başlattığı gerçek geliştirme sürecini de durdurmuş
    olabileceğimiz fark edildi. Ders: paylaşılan bir portu kapatmadan önce o sürecin kime ait
-   olabileceğini düşünmek gerekiyor.
+   olabileceğini düşünmek gerekiyor. (Bu dersten sonra, sonraki testler kullanıcının portuna
+   hiç dokunmadan ayrı bir test portunda -5078- yapıldı.)
+7. **`SessionExpiryWatcher` başlarken `RedisCommandException: admin mode is enabled: CONFIG`
+   hatası verdi** → `CONFIG SET` gibi yönetimsel komutlar StackExchange.Redis'te varsayılan
+   olarak kapalıdır (yanlışlıkla tehlikeli bir komut çalıştırılmasın diye).
+   `ConnectionMultiplexer.Connect("localhost:6379,allowAdmin=true")` ile açıldı. Bu hata
+   sırasında uygulamanın çökmemiş olması (sadece `LogWarning` yazıp devam etmesi),
+   `SessionExpiryWatcher.StartAsync` içindeki `try/catch`'in tam da amaçlandığı gibi
+   çalıştığının kanıtıydı.
 
 ---
 

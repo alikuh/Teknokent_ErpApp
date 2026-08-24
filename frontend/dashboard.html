@@ -88,7 +88,7 @@
 
         .cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
             gap: 16px;
             margin-bottom: 20px;
         }
@@ -120,6 +120,15 @@
             height: 18px;
         }
 
+        /* .card flex konteyner oldugu icin, metin kutusunun varsayilan min-width'i
+           "auto" olur - yani icerik (buyuk satis rakamlari) kutudan genis oldugunda
+           kucule kucule sigmak yerine karttan disari tasar. min-width:0 bunu duzeltir,
+           flex:1 de kalan alani bu kutuya verir. */
+        .card > div:last-child {
+            min-width: 0;
+            flex: 1;
+        }
+
         .card.warning .icon {
             background: #fbeaea;
             color: #c0392b;
@@ -138,6 +147,12 @@
             font-size: 22px;
             font-weight: bold;
             color: #23282e;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            /* Gercek kucultme JS'teki fitValueText() ile yapiliyor (asagida <script>),
+               font-size:22px burada sadece baslangic/varsayilan deger. nowrap+ellipsis,
+               JS herhangi bir sebeple calismazsa (ör. hata) son care olarak devrede. */
         }
 
         .card.warning .value {
@@ -442,18 +457,55 @@
             return response;
         }
 
+        // Binlik ayracli, TR yerel bicimiyle ("12.345,67 TL") gosterir.
+        function formatTl(amount) {
+            return amount.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " TL";
+        }
+
+        // CSS'e gore daha guvenilir yontem: metni yaz, sonra kutuya tasiyor mu diye
+        // gercekten olc (scrollWidth > clientWidth), tasiyorsa sigana kadar font'u
+        // 1'er piksel kucult. Rakam ne kadar uzun olursa olsun (buyuk TL tutari,
+        // kalabalik binlik ayraclar vb.) alt satira gecmeden tek satirda kalir.
+        function setCardValue(id, text) {
+            const el = document.getElementById(id);
+            el.textContent = text;
+            el.style.fontSize = "22px";
+
+            let fontSize = 22;
+            const minFontSize = 12;
+            while (el.scrollWidth > el.clientWidth && fontSize > minFontSize) {
+                fontSize -= 1;
+                el.style.fontSize = fontSize + "px";
+            }
+        }
+
+        let lastSummaryData = null;
+
+        function renderSummaryCards(data) {
+            setCardValue("dailySales", formatTl(data.dailySales));
+            setCardValue("weeklySales", formatTl(data.weeklySales));
+            setCardValue("monthlySales", formatTl(data.monthlySales));
+            setCardValue("totalProducts", data.totalProducts);
+            setCardValue("totalStock", data.totalStock);
+            setCardValue("lowStockProducts", data.lowStockProducts);
+        }
+
         async function loadSummary() {
             const response = await authFetch(`${API_URL}/dashboard/summary`);
             if (!response) return;
-            const data = await response.json();
-
-            document.getElementById("dailySales").textContent = data.dailySales.toFixed(2) + " TL";
-            document.getElementById("weeklySales").textContent = data.weeklySales.toFixed(2) + " TL";
-            document.getElementById("monthlySales").textContent = data.monthlySales.toFixed(2) + " TL";
-            document.getElementById("totalProducts").textContent = data.totalProducts;
-            document.getElementById("totalStock").textContent = data.totalStock;
-            document.getElementById("lowStockProducts").textContent = data.lowStockProducts;
+            lastSummaryData = await response.json();
+            renderSummaryCards(lastSummaryData);
         }
+
+        // Pencere yeniden boyutlandirildiginda kartlarin genisligi degisebilir;
+        // API'ye tekrar gitmeden, elimizdeki veriyle font boyutunu yeniden olcup ayarliyoruz.
+        let resizeTimeout;
+        window.addEventListener("resize", () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (lastSummaryData) renderSummaryCards(lastSummaryData);
+            }, 150);
+        });
 
         async function loadSalesChart() {
             const response = await authFetch(`${API_URL}/dashboard/sales-by-day?days=7`);
@@ -502,7 +554,7 @@
 
             data.forEach(p => {
                 const row = document.createElement("tr");
-                row.innerHTML = `<td>${p.productName}</td><td>${p.totalSold}</td><td>${p.totalRevenue.toFixed(2)} TL</td>`;
+                row.innerHTML = `<td>${p.productName}</td><td>${p.totalSold}</td><td>${formatTl(p.totalRevenue)}</td>`;
                 tbody.appendChild(row);
             });
         }
@@ -528,8 +580,8 @@
                 row.innerHTML = `
             <td>${s.product ? s.product.name : "-"}</td>
             <td>${s.quantity}</td>
-            <td>${s.unitPrice.toFixed(2)} TL</td>
-            <td>${s.totalPrice.toFixed(2)} TL</td>
+            <td>${formatTl(s.unitPrice)}</td>
+            <td>${formatTl(s.totalPrice)}</td>
             <td>${date}</td>
             `;
                 tbody.appendChild(row);

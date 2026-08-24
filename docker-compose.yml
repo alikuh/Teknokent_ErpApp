@@ -34,14 +34,12 @@ services:
     container_name: erp-prometheus
     restart: always
     volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus:/etc/prometheus:ro
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
-    # ErpApi container icinde degil, host uzerinde (dotnet run) calisiyor.
-    # host.docker.internal bu container icinden host'a ulasmayi saglar.
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - "host.docker.internal:host-gateway" # Linux'ta host'a erişim için
 
   loki:
     image: grafana/loki:2.9.8
@@ -49,7 +47,7 @@ services:
     restart: always
     command: -config.file=/etc/loki/loki-config.yml
     volumes:
-      - ./monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - ./monitoring/loki:/etc/loki:ro
       - loki_data:/loki
     ports:
       - "3100:3100"

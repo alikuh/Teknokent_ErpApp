@@ -150,6 +150,17 @@ public class UsersController : ControllerBase
             await db.HashSetAsync($"session:{sessionToken}", hashEntries);
             await db.KeyExpireAsync($"session:{sessionToken}", TimeSpan.FromMinutes(5));
 
+            // session:{token} TTL'den silindiğinde değeri de onunla gider; SessionExpiryWatcher
+            // o an "kimin oturumuydu" diye buradan okuyabilsin diye daha uzun ömürlü (mutlak
+            // 2 saatlik sınırdan güvenli şekilde uzun) bir kopya tutuyoruz.
+            var metaEntries = new HashEntry[]
+            {
+                new HashEntry("UserId", user.Id),
+                new HashEntry("Username", user.Username)
+            };
+            await db.HashSetAsync($"session-meta:{sessionToken}", metaEntries);
+            await db.KeyExpireAsync($"session-meta:{sessionToken}", TimeSpan.FromHours(3));
+
             await db.KeyDeleteAsync(failKey);
 
             AppMetrics.LoginAttemptsTotal.WithLabels("success").Inc();
@@ -191,6 +202,7 @@ public class UsersController : ControllerBase
             var sessionUserId = sessionValues[1];
 
             bool deleted = await db.KeyDeleteAsync(sessionKey);
+            await db.KeyDeleteAsync($"session-meta:{token}");
             if (deleted)
             {
                 AppMetrics.ActiveSessions.Dec();
