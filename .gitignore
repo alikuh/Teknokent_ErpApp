@@ -4,6 +4,13 @@ obj/
 
 # IDE
 .vs/
+.vscode/
+.idea/
+*.user
+
+# Ortam degiskenleri / gizli bilgiler
+*.env
+.env
 
 # OS
 .DS_Store
