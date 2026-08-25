@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ErpApi.Data;
 using ErpApi.Models;
 using ErpApi.Services;
@@ -16,14 +17,14 @@ public class UsersController : ControllerBase
     private readonly AppDbContext _context;
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<UsersController> _logger;
-    private readonly IGeoLocationService _geoLocation;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public UsersController(AppDbContext context, IConnectionMultiplexer redis, ILogger<UsersController> logger, IGeoLocationService geoLocation)
+    public UsersController(AppDbContext context, IConnectionMultiplexer redis, ILogger<UsersController> logger, IServiceScopeFactory scopeFactory)
     {
         _context = context;
         _redis = redis;
         _logger = logger;
-        _geoLocation = geoLocation;
+        _scopeFactory = scopeFactory;
     }
 
     public class RegisterRequest
@@ -168,8 +169,29 @@ public class UsersController : ControllerBase
             AppMetrics.LoginAttemptsTotal.WithLabels("success").Inc();
             AppMetrics.ActiveSessions.Inc();
 
-            string location = await _geoLocation.ResolveLocationAsync(clientIp);
-            _logger.LogInformation("Kullanıcı giriş yaptı: {Username} (Id: {UserId}, IP: {ClientIp}, Konum: {Location})", user.Username, user.Id, clientIp, location);
+            // Konum tespiti ip-api.com'a giden bir dış HTTP çağrısı gerektiriyor ve
+            // sadece log içinde kullanılıyor; login yanıtını bu çağrının süresine
+            // (ip-api yavaşladığında/rate limit'e takıldığında 2 saniyeye kadar) bağlı
+            // tutmamak için arka planda, isteğin DI scope'undan bağımsız yeni bir scope
+            // içinde çalıştırıyoruz - request scope response dönünce dispose olacağı
+            // için _scopeFactory ile taze bir scope açmak burada güvenli olan yöntem.
+            string username = user.Username;
+            int userId = user.Id;
+            _ = Task.Run(async () =>
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var geoLocation = scope.ServiceProvider.GetRequiredService<IGeoLocationService>();
+                var logger = scope.ServiceProvider.GetRequiredService<ILogger<UsersController>>();
+                try
+                {
+                    string location = await geoLocation.ResolveLocationAsync(clientIp);
+                    logger.LogInformation("Kullanıcı giriş yaptı: {Username} (Id: {UserId}, IP: {ClientIp}, Konum: {Location})", username, userId, clientIp, location);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Giriş sonrası konum tespiti başarısız oldu: {Username} (Id: {UserId})", username, userId);
+                }
+            });
 
             return Ok(new { token = sessionToken, username = user.Username });
         }
