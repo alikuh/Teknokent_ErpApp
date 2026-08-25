@@ -1,0 +1,128 @@
+/*
+ * Ortak tema degiskenleri (acik/koyu - beyaz/siyah).
+ * Her sayfanin kendi <style> blogu bu degiskenleri (var(--...)) kullanir,
+ * boylece tema degisince renkler tek yerden guncellenir.
+ *
+ * Aktif tema, <html> etiketindeki data-theme attribute'u ile belirlenir
+ * (theme.js tarafindan yonetilir). Attribute yoksa/"light" ise varsayilan
+ * (beyaz) tema, "dark" ise siyah tema uygulanir.
+ */
+
+:root {
+    --color-bg-start: #eef2f7;
+    --color-bg-end: #dde6f0;
+    --color-surface: #ffffff;
+    --color-surface-alt: #fafbfc;
+    --color-input-bg: #fbfcfd;
+    --color-input-bg-focus: #ffffff;
+
+    --color-text: #23282e;
+    --color-text-secondary: #5a6572;
+    --color-text-muted: #8a929c;
+    --color-text-faint: #a3abb5;
+
+    --color-border: #dde2e8;
+    --color-border-light: #eef0f3;
+
+    --color-accent: #3a6ea5;
+    --color-accent-hover: #2f5c8a;
+    --color-accent-dark: #2b5580;
+    --color-accent-soft-bg: #eef2f7;
+
+    --color-danger: #c0392b;
+    --color-danger-bg: #fbeaea;
+    --color-success: #2c7a4b;
+    --color-success-bg: #eaf3ee;
+
+    --color-ghost-bg: #eef0f3;
+    --color-ghost-bg-hover: #e3e6ea;
+    --color-disabled-bg: #b3bcc6;
+
+    --color-overlay-bg: rgba(23, 30, 38, 0.45);
+
+    --shadow-card: 0 8px 20px rgba(31, 45, 61, 0.08);
+    --shadow-card-lg: 0 12px 30px rgba(31, 45, 61, 0.12);
+    --shadow-modal: 0 20px 45px rgba(0, 0, 0, 0.2);
+}
+
+html[data-theme="dark"] {
+    --color-bg-start: #0b0c0e;
+    --color-bg-end: #000000;
+    --color-surface: #1a1b1e;
+    --color-surface-alt: #202126;
+    --color-input-bg: #1e1f24;
+    --color-input-bg-focus: #26272c;
+
+    --color-text: #f2f3f5;
+    --color-text-secondary: #b7bcc4;
+    --color-text-muted: #9aa0ab;
+    --color-text-faint: #6c7178;
+
+    --color-border: #34363c;
+    --color-border-light: #2a2b30;
+
+    --color-accent: #5b93c9;
+    --color-accent-hover: #74a6d8;
+    --color-accent-dark: #3a6ea5;
+    --color-accent-soft-bg: #17232f;
+
+    --color-danger: #e2594b;
+    --color-danger-bg: #3a1e1c;
+    --color-success: #4caf7d;
+    --color-success-bg: #163723;
+
+    --color-ghost-bg: #2a2b30;
+    --color-ghost-bg-hover: #34363c;
+    --color-disabled-bg: #4a4d54;
+
+    --color-overlay-bg: rgba(0, 0, 0, 0.6);
+
+    --shadow-card: 0 8px 20px rgba(0, 0, 0, 0.35);
+    --shadow-card-lg: 0 12px 30px rgba(0, 0, 0, 0.45);
+    --shadow-modal: 0 20px 45px rgba(0, 0, 0, 0.55);
+}
+
+html {
+    background: var(--color-bg-start);
+}
+
+/* theme.js tarafindan sayfaya otomatik eklenen sag ust tema butonu */
+.theme-toggle-btn {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    z-index: 500;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1.5px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    box-shadow: var(--shadow-card);
+    transition: background .15s ease, color .15s ease, transform .1s ease, border-color .15s ease;
+}
+
+.theme-toggle-btn:hover {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    transform: translateY(-1px);
+}
+
+.theme-toggle-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+@media (max-width: 480px) {
+    .theme-toggle-btn {
+        top: 12px;
+        right: 12px;
+        width: 34px;
+        height: 34px;
+    }
+}

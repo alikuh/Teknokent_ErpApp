@@ -3,6 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
+    <script src="theme.js"></script>
+    <link rel="stylesheet" href="theme.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ERP - Ürünler</title>
     <style>
@@ -12,11 +14,11 @@
 
         body {
             font-family: -apple-system, Segoe UI, Roboto, Tahoma, sans-serif;
-            background: linear-gradient(135deg, #eef2f7 0%, #dde6f0 100%);
+            background: linear-gradient(135deg, var(--color-bg-start) 0%, var(--color-bg-end) 100%);
             margin: 0;
             padding: 24px;
             min-height: 100vh;
-            color: #23282e;
+            color: var(--color-text);
         }
 
         .page {
@@ -31,11 +33,11 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: #fff;
+            background: var(--color-surface);
             padding: 14px 22px;
             border-radius: 12px;
             margin-bottom: 20px;
-            box-shadow: 0 8px 20px rgba(31, 45, 61, 0.08);
+            box-shadow: var(--shadow-card);
         }
 
         .brand {
@@ -43,7 +45,7 @@
             align-items: center;
             gap: 10px;
             font-weight: 700;
-            color: #23282e;
+            color: var(--color-text);
             font-size: 14px;
         }
 
@@ -51,7 +53,7 @@
             width: 30px;
             height: 30px;
             border-radius: 8px;
-            background: linear-gradient(135deg, #3a6ea5, #2b5580);
+            background: linear-gradient(135deg, var(--color-accent), var(--color-accent-dark));
             color: #fff;
             display: flex;
             align-items: center;
@@ -62,7 +64,7 @@
 
         .topbar nav a {
             margin-left: 18px;
-            color: #5a6572;
+            color: var(--color-text-secondary);
             text-decoration: none;
             font-weight: 600;
             font-size: 14px;
@@ -71,12 +73,12 @@
         }
 
         .topbar nav a:hover {
-            color: #3a6ea5;
+            color: var(--color-accent);
         }
 
         .topbar nav a.active {
-            color: #3a6ea5;
-            border-bottom-color: #3a6ea5;
+            color: var(--color-accent);
+            border-bottom-color: var(--color-accent);
         }
 
         .topbar .user {
@@ -84,14 +86,14 @@
             align-items: center;
             gap: 16px;
             font-size: 13px;
-            color: #8a929c;
+            color: var(--color-text-muted);
         }
 
         .panel {
-            background: #fff;
+            background: var(--color-surface);
             padding: 22px 24px;
             border-radius: 12px;
-            box-shadow: 0 8px 20px rgba(31, 45, 61, 0.08);
+            box-shadow: var(--shadow-card);
             margin-bottom: 20px;
         }
 
@@ -105,7 +107,7 @@
         }
 
         .panel-head h2 {
-            color: #23282e;
+            color: var(--color-text);
             font-size: 17px;
             margin: 0;
         }
@@ -121,22 +123,23 @@
             transform: translateY(-50%);
             width: 14px;
             height: 14px;
-            color: #a3abb5;
+            color: var(--color-text-faint);
         }
 
         .search-box input {
             padding: 8px 12px 8px 32px;
-            border: 1.5px solid #dde2e8;
+            border: 1.5px solid var(--color-border);
             border-radius: 8px;
             font-size: 13px;
             width: 220px;
-            background: #fbfcfd;
+            background: var(--color-input-bg);
+            color: var(--color-text);
         }
 
         .search-box input:focus {
             outline: none;
-            border-color: #3a6ea5;
-            background: #fff;
+            border-color: var(--color-accent);
+            background: var(--color-input-bg-focus);
         }
 
         .form-grid {
@@ -150,24 +153,25 @@
             display: block;
             font-size: 11px;
             font-weight: 600;
-            color: #5a6572;
+            color: var(--color-text-secondary);
             margin-bottom: 5px;
         }
 
         .form-grid input {
             width: 100%;
             padding: 9px 11px;
-            border: 1.5px solid #dde2e8;
+            border: 1.5px solid var(--color-border);
             border-radius: 8px;
             font-size: 14px;
-            background: #fbfcfd;
+            background: var(--color-input-bg);
+            color: var(--color-text);
             transition: border-color .15s ease, background .15s ease;
         }
 
         .form-grid input:focus {
             outline: none;
-            border-color: #3a6ea5;
-            background: #fff;
+            border-color: var(--color-accent);
+            background: var(--color-input-bg-focus);
         }
 
         .form-actions {
@@ -181,7 +185,7 @@
 
         .btn-primary {
             padding: 9px 20px;
-            background: #3a6ea5;
+            background: var(--color-accent);
             color: white;
             border: none;
             border-radius: 8px;
@@ -192,13 +196,13 @@
         }
 
         .btn-primary:hover {
-            background: #2f5c8a;
+            background: var(--color-accent-hover);
         }
 
         .btn-ghost {
             padding: 9px 16px;
-            background: #eef0f3;
-            color: #5a6572;
+            background: var(--color-ghost-bg);
+            color: var(--color-text-secondary);
             border: none;
             border-radius: 8px;
             font-weight: 600;
@@ -207,7 +211,7 @@
         }
 
         .btn-ghost:hover {
-            background: #e3e6ea;
+            background: var(--color-ghost-bg-hover);
         }
 
         .table-wrap {
@@ -224,20 +228,20 @@
         td {
             text-align: left;
             padding: 11px 10px;
-            border-bottom: 1px solid #eef0f3;
+            border-bottom: 1px solid var(--color-border-light);
             font-size: 14px;
         }
 
         th {
-            background: #fafbfc;
-            color: #5a6572;
+            background: var(--color-surface-alt);
+            color: var(--color-text-secondary);
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.4px;
         }
 
         tbody tr:hover {
-            background: #fafbfc;
+            background: var(--color-surface-alt);
         }
 
         .stock-pill {
@@ -246,20 +250,20 @@
             border-radius: 999px;
             font-size: 12px;
             font-weight: 700;
-            background: #eaf3ee;
-            color: #2c7a4b;
+            background: var(--color-success-bg);
+            color: var(--color-success);
         }
 
         .stock-pill.low {
-            background: #fbeaea;
-            color: #c0392b;
+            background: var(--color-danger-bg);
+            color: var(--color-danger);
         }
 
         .empty-row td,
         .loading-row td {
             text-align: center;
             padding: 30px 10px;
-            color: #a3abb5;
+            color: var(--color-text-faint);
             font-size: 14px;
         }
 
@@ -283,17 +287,17 @@
         }
 
         .btn-edit {
-            background: #eef2f7;
-            color: #3a6ea5;
+            background: var(--color-accent-soft-bg);
+            color: var(--color-accent);
         }
 
         .btn-delete {
-            background: #c0392b;
+            background: var(--color-danger);
             color: white;
         }
 
         .btn-sell {
-            background: #2c7a4b;
+            background: var(--color-success);
             color: white;
         }
 
@@ -301,7 +305,7 @@
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(23, 30, 38, 0.45);
+            background: var(--color-overlay-bg);
             align-items: center;
             justify-content: center;
             z-index: 100;
@@ -312,37 +316,39 @@
         }
 
         .modal {
-            background: #fff;
+            background: var(--color-surface);
             width: 300px;
             padding: 24px;
             border-radius: 12px;
-            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
+            box-shadow: var(--shadow-modal);
         }
 
         .modal h3 {
             margin: 0 0 6px;
             font-size: 16px;
-            color: #23282e;
+            color: var(--color-text);
         }
 
         .modal p {
             margin: 0 0 16px;
             font-size: 13px;
-            color: #8a929c;
+            color: var(--color-text-muted);
         }
 
         .modal input {
             width: 100%;
             padding: 9px 11px;
-            border: 1.5px solid #dde2e8;
+            border: 1.5px solid var(--color-border);
             border-radius: 8px;
             font-size: 14px;
             margin-bottom: 16px;
+            background: var(--color-input-bg);
+            color: var(--color-text);
         }
 
         .modal input:focus {
             outline: none;
-            border-color: #3a6ea5;
+            border-color: var(--color-accent);
         }
 
         .modal-actions {
@@ -352,7 +358,7 @@
         }
 
         .modal .err {
-            color: #c0392b;
+            color: var(--color-danger);
             font-size: 12px;
             margin: -10px 0 12px;
             min-height: 14px;
@@ -373,8 +379,8 @@
                 <a href="products.html" class="active">Ürünler</a>
             </nav>
             <div class="user">
-                <span>Hoş geldin, <strong id="usernameDisplay" style="color:#23282e;"></strong></span>
-                <a href="#" onclick="logout()" style="color:#c0392b; font-weight:600; text-decoration:none;">Çıkış
+                <span>Hoş geldin, <strong id="usernameDisplay" style="color:var(--color-text);"></strong></span>
+                <a href="#" onclick="logout()" style="color:var(--color-danger); font-weight:600; text-decoration:none;">Çıkış
                     Yap</a>
             </div>
         </div>
@@ -458,7 +464,7 @@
             <p id="deleteProductName">Bu ürünü silmek istediğine emin misin?</p>
             <div class="modal-actions">
                 <button class="btn-ghost" onclick="closeDeleteModal()">Vazgeç</button>
-                <button class="btn-primary" style="background:#c0392b;" onclick="confirmDelete()">Sil</button>
+                <button class="btn-primary" style="background:var(--color-danger);" onclick="confirmDelete()">Sil</button>
             </div>
         </div>
     </div>

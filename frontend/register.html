@@ -2,6 +2,8 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="theme.css">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kayıt Ol | ERP</title>
 <style>
@@ -13,16 +15,16 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: linear-gradient(135deg, #eef2f7 0%, #dde6f0 100%);
+		background: linear-gradient(135deg, var(--color-bg-start) 0%, var(--color-bg-end) 100%);
 		font-family: -apple-system, Segoe UI, Roboto, Tahoma, sans-serif;
 	}
 
 	.card {
-		background: #fff;
+		background: var(--color-surface);
 		width: 340px;
 		padding: 38px 34px 30px;
 		border-radius: 14px;
-		box-shadow: 0 12px 30px rgba(31, 45, 61, 0.12);
+		box-shadow: var(--shadow-card-lg);
 	}
 
 	.badge {
@@ -30,7 +32,7 @@
 		height: 46px;
 		margin: 0 auto 16px;
 		border-radius: 12px;
-		background: linear-gradient(135deg, #3a6ea5, #2b5580);
+		background: linear-gradient(135deg, var(--color-accent), var(--color-accent-dark));
 		color: #fff;
 		display: flex;
 		align-items: center;
@@ -44,13 +46,13 @@
 		font-size: 19px;
 		margin: 0 0 4px;
 		text-align: center;
-		color: #23282e;
+		color: var(--color-text);
 	}
 
 	.subtitle {
 		text-align: center;
 		font-size: 13px;
-		color: #8a929c;
+		color: var(--color-text-muted);
 		margin: 0 0 24px;
 	}
 
@@ -58,7 +60,7 @@
 		display: block;
 		font-size: 12px;
 		font-weight: 600;
-		color: #5a6572;
+		color: var(--color-text-secondary);
 		margin-bottom: 5px;
 	}
 
@@ -77,28 +79,29 @@
 		transform: translateY(-50%);
 		width: 15px;
 		height: 15px;
-		color: #a3abb5;
+		color: var(--color-text-faint);
 	}
 
 	input {
 		width: 100%;
 		padding: 10px 12px 10px 34px;
-		border: 1.5px solid #dde2e8;
+		border: 1.5px solid var(--color-border);
 		border-radius: 8px;
 		font-size: 14px;
-		background: #fbfcfd;
+		background: var(--color-input-bg);
+		color: var(--color-text);
 		transition: border-color .15s ease, background .15s ease;
 	}
 
 	input:focus {
 		outline: none;
-		border-color: #3a6ea5;
-		background: #fff;
+		border-color: var(--color-accent);
+		background: var(--color-input-bg-focus);
 	}
 
 	.hint {
 		font-size: 11px;
-		color: #a3abb5;
+		color: var(--color-text-faint);
 		margin-top: 4px;
 	}
 
@@ -108,7 +111,7 @@
 		margin-top: 8px;
 		border: none;
 		border-radius: 8px;
-		background: #3a6ea5;
+		background: var(--color-accent);
 		color: #fff;
 		font-size: 14px;
 		font-weight: 600;
@@ -117,7 +120,7 @@
 	}
 
 	.submit-btn:hover {
-		background: #2f5c8a;
+		background: var(--color-accent-hover);
 	}
 
 	.submit-btn:active {
@@ -125,7 +128,7 @@
 	}
 
 	.submit-btn:disabled {
-		background: #b3bcc6;
+		background: var(--color-disabled-bg);
 		cursor: default;
 		transform: none;
 	}
@@ -137,20 +140,20 @@
 		margin-top: 12px;
 	}
 
-	.msg.err { color: #c0392b; }
-	.msg.ok { color: #2c7a4b; }
+	.msg.err { color: var(--color-danger); }
+	.msg.ok { color: var(--color-success); }
 
 	.switch {
 		text-align: center;
 		font-size: 13px;
 		margin-top: 20px;
 		padding-top: 18px;
-		border-top: 1px solid #eef0f3;
-		color: #8a929c;
+		border-top: 1px solid var(--color-border-light);
+		color: var(--color-text-muted);
 	}
 
 	.switch a {
-		color: #3a6ea5;
+		color: var(--color-accent);
 		text-decoration: none;
 		font-weight: 600;
 	}
