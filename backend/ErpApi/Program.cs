@@ -42,6 +42,9 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(
 // yazsın ve erp_active_sessions sayacını düşürsün diye - bkz. Services/SessionExpiryWatcher.cs
 builder.Services.AddHostedService<ErpApi.Services.SessionExpiryWatcher>();
 
+// Başarılı girişlerde IP'den kaba şehir/ülke tahmini için (bkz. Services/GeoLocationService.cs)
+builder.Services.AddHttpClient<ErpApi.Services.IGeoLocationService, ErpApi.Services.GeoLocationService>();
+
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();

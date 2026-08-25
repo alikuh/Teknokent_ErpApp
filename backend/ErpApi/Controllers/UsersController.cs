@@ -16,12 +16,14 @@ public class UsersController : ControllerBase
     private readonly AppDbContext _context;
     private readonly IConnectionMultiplexer _redis;
     private readonly ILogger<UsersController> _logger;
+    private readonly IGeoLocationService _geoLocation;
 
-    public UsersController(AppDbContext context, IConnectionMultiplexer redis, ILogger<UsersController> logger)
+    public UsersController(AppDbContext context, IConnectionMultiplexer redis, ILogger<UsersController> logger, IGeoLocationService geoLocation)
     {
         _context = context;
         _redis = redis;
         _logger = logger;
+        _geoLocation = geoLocation;
     }
 
     public class RegisterRequest
@@ -165,7 +167,9 @@ public class UsersController : ControllerBase
 
             AppMetrics.LoginAttemptsTotal.WithLabels("success").Inc();
             AppMetrics.ActiveSessions.Inc();
-            _logger.LogInformation("Kullanıcı giriş yaptı: {Username} (Id: {UserId}, IP: {ClientIp})", user.Username, user.Id, clientIp);
+
+            string location = await _geoLocation.ResolveLocationAsync(clientIp);
+            _logger.LogInformation("Kullanıcı giriş yaptı: {Username} (Id: {UserId}, IP: {ClientIp}, Konum: {Location})", user.Username, user.Id, clientIp, location);
 
             return Ok(new { token = sessionToken, username = user.Username });
         }
