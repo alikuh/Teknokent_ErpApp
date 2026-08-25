@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <script src="theme.js"></script>
+    <script src="csrf.js"></script>
     <link rel="stylesheet" href="theme.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ERP - Ürünler</title>
@@ -515,7 +516,16 @@
         // popup 
         async function authFetch(url, options = {}) {
             const opts = Object.assign({}, options);
+            opts.credentials = "include";
             opts.headers = Object.assign({}, options.headers, { "Authorization": token });
+
+            // GET/HEAD disindaki (durum degistiren) isteklerde CSRF token'i da ekle -
+            // bkz. csrf.js / Middleware/CsrfMiddleware.cs.
+            const method = (opts.method || "GET").toUpperCase();
+            if (method !== "GET" && method !== "HEAD") {
+                opts.headers["X-CSRF-Token"] = CsrfHelper.getToken();
+            }
+
             const response = await fetch(url, opts);
 
             if (response.status === 401) {

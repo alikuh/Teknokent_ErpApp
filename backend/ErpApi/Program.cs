@@ -48,13 +48,22 @@ builder.Services.AddHttpClient<ErpApi.Services.IGeoLocationService, ErpApi.Servi
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
+
+// CSRF çerezinin (csrf_token) tarayıcılar arası (frontend farklı porttan
+// servis ediliyor) gidip gelebilmesi için origin'in "*" değil, açıkça
+// belirtilmiş olması ve AllowCredentials() gerekiyor - tarayıcılar
+// credentialed isteklerde wildcard origin'e izin vermiyor.
+string[] allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
+    ?? new[] { "http://localhost:5500" };
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 
@@ -72,13 +81,21 @@ app.UseSwaggerUI(options =>
 });
 
 app.UseHttpsRedirection();
-app.UseCors("AllowAll");
+app.UseCors("AllowFrontend");
 
 // prometheus-net: her isteği method/route/status koduna göre otomatik sayar
 // ve süresini ölçer (raw URL değil route template kullanır, bu yüzden
 // cardinality güvenlidir), sonra /metrics endpoint'inden dışarı verir.
 app.UseHttpMetrics();
 app.MapMetrics();
+
+// CORS'tan sonra, route eşleşmesinden önce - bkz. Middleware/CsrfMiddleware.cs
+app.UseMiddleware<ErpApi.Middleware.CsrfMiddleware>();
+
+// Frontend sayfaları (login/register) ilk açıldığında, kullanıcı henüz hiçbir
+// API çağrısı yapmamışken bile csrf_token çerezinin oluşmuş olması için
+// çağırdığı, güvenli (sadece GET) bir "ısındırma" endpoint'i.
+app.MapGet("/api/csrf-token", () => Results.Ok());
 
 app.MapControllers();
 

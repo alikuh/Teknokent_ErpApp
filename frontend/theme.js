@@ -1,31 +1,27 @@
 /*
  * Siyah/beyaz tema yonetimi.
  *
- * NOT: Tema tercihi su an localStorage'da tutuluyor. Ilerleyen adimda
- * olusturulacak cerez (cookie) altyapisina gecildiginde sadece
- * readStoredTheme/writeStoredTheme fonksiyonlarinin icini degistirmek yeterli
- * - sayfalardaki diger kodun degismesine gerek yok.
+ * Tema tercihi bir cerezde (cookie) tutulur - sadece bu tarayicidaki
+ * tercihtir, backend'in bilmesine gerek yoktur, bu yuzden sunucuya hic
+ * gonderilmesi gerekmeyen sade bir cerez olarak tutuluyor.
  */
 (function () {
     "use strict";
 
-    var STORAGE_KEY = "erp-theme";
+    var COOKIE_NAME = "erp-theme";
+    var COOKIE_MAX_AGE_DAYS = 365;
 
     function readStoredTheme() {
-        try {
-            return localStorage.getItem(STORAGE_KEY);
-        } catch (e) {
-            return null;
-        }
+        var match = document.cookie.match(new RegExp("(?:^|; )" + COOKIE_NAME + "=([^;]*)"));
+        return match ? decodeURIComponent(match[1]) : null;
     }
 
     function writeStoredTheme(theme) {
-        try {
-            localStorage.setItem(STORAGE_KEY, theme);
-        } catch (e) {
-            // localStorage kullanilamiyorsa (ör. gizli sekme) sessizce yok say;
-            // tema o oturum icin sayfa yenilenene kadar gecerli kalir.
-        }
+        var maxAgeSeconds = COOKIE_MAX_AGE_DAYS * 24 * 60 * 60;
+        // Path=/ : sitenin tum sayfalarinda gecerli olsun.
+        // SameSite=Lax : bu cerez hassas degil, ekstra kisitlamaya gerek yok.
+        document.cookie = COOKIE_NAME + "=" + encodeURIComponent(theme) +
+            "; Path=/; Max-Age=" + maxAgeSeconds + "; SameSite=Lax";
     }
 
     function prefersDark() {

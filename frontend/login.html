@@ -4,6 +4,7 @@
 <head>
 	<meta charset="UTF-8">
 	<script src="theme.js"></script>
+	<script src="csrf.js"></script>
 	<link rel="stylesheet" href="theme.css">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Giriş | ERP</title>
@@ -207,6 +208,10 @@
 		var msgBox = document.getElementById("msg");
 		var loginBtn = document.getElementById("loginBtn");
 
+		// Sayfa acilir acilmaz csrf_token cerezini olustursun diye - asagidaki
+		// login istegi ilk API cagrisi oldugu icin, o an cerez henuz olmayabilir.
+		CsrfHelper.prime(API_URL);
+
 		function showMsg(text) {
 			msgBox.textContent = text;
 			msgBox.className = text ? "msg err" : "msg";
@@ -229,7 +234,11 @@
 			try {
 				var res = await fetch(API_URL + "/users/login", {
 					method: "POST",
-					headers: { "Content-Type": "application/json" },
+					credentials: "include",
+					headers: {
+						"Content-Type": "application/json",
+						"X-CSRF-Token": CsrfHelper.getToken()
+					},
 					body: JSON.stringify({ username: user, password: pass })
 				});
 
