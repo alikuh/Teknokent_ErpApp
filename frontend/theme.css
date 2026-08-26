@@ -1,13 +1,3 @@
-/*
- * Ortak tema degiskenleri (acik/koyu - beyaz/siyah).
- * Her sayfanin kendi <style> blogu bu degiskenleri (var(--...)) kullanir,
- * boylece tema degisince renkler tek yerden guncellenir.
- *
- * Aktif tema, <html> etiketindeki data-theme attribute'u ile belirlenir
- * (theme.js tarafindan yonetilir). Attribute yoksa/"light" ise varsayilan
- * (beyaz) tema, "dark" ise siyah tema uygulanir.
- */
-
 :root {
     --color-bg-start: #eef2f7;
     --color-bg-end: #dde6f0;

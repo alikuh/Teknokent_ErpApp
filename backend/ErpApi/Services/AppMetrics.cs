@@ -2,17 +2,6 @@ using Prometheus;
 
 namespace ErpApi.Services;
 
-/// <summary>
-/// Uygulamaya özel Prometheus metrikleri burada tek yerde tanımlanır.
-/// prometheus-net.AspNetCore zaten HTTP istek sayısı/süresi gibi metrikleri
-/// otomatik topluyor (bkz. Program.cs -> UseHttpMetrics); buradakiler ise
-/// "iş" seviyesinde anlam taşıyan, elle işaretlenen metriklerdir.
-///
-/// Not: Prometheus label'larına asla kullanıcı adı, IP gibi yüksek-cardinality
-/// (çok farklı değer alabilen) veriler koyulmaz - her farklı değer ayrı bir
-/// zaman serisi demektir ve Prometheus'u yavaşlatır/şişirir. Kişiye özel bilgi
-/// bu yüzden Loki (log) tarafında tutulur.
-/// </summary>
 public static class AppMetrics
 {
     public static readonly Counter LoginAttemptsTotal = Metrics.CreateCounter(
@@ -20,7 +9,7 @@ public static class AppMetrics
         "Kullanıcıların yaptığı login denemelerinin sayısı.",
         new CounterConfiguration
         {
-            LabelNames = new[] { "result" } // "success" | "failure"
+            LabelNames = new[] { "result" }
         });
 
     public static readonly Gauge ActiveSessions = Metrics.CreateGauge(
@@ -32,6 +21,6 @@ public static class AppMetrics
         "Çok fazla başarısız denemeden dolayı devreye giren rate-limit kilitlenmelerinin sayısı.",
         new CounterConfiguration
         {
-            LabelNames = new[] { "scope" } // "user" | "ip"
+            LabelNames = new[] { "scope" }
         });
 }

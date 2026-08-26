@@ -44,8 +44,6 @@ public static class AuthHelper
         }
         catch (RedisException)
         {
-            // Redis'e ulasilamiyorsa oturumu dogrulayamayiz; guvenli taraf
-            // kimligi dogrulanmamis (null) donup cagiran yeri 401'e dusurmektir.
             return null;
         }
     }

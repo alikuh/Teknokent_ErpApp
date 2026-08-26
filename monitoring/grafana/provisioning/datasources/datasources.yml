@@ -1,6 +1,3 @@
-# Grafana açıldığında Prometheus ve Loki'yi elle eklemene gerek kalmasın diye
-# otomatik olarak datasource tanımlayan dosya.
-
 apiVersion: 1
 
 datasources:

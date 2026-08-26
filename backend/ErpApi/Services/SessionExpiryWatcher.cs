@@ -2,12 +2,6 @@ using StackExchange.Redis;
 
 namespace ErpApi.Services;
 
-/// <summary>
-/// Bir kullanıcı hiçbir işlem yapmadan oturumu (session:{token} anahtarı) Redis'te
-/// kendiliğinden zaman aşımına uğradığında (hareketsizlikten 5dk veya mutlak 2 saat
-/// sınırından), bunu da explicit "/logout" çağrısı gibi audit'e yazar ve
-/// AppMetrics.ActiveSessions sayacını düşürür.
-///
 /// Nasıl çalışır: Redis'in "keyspace notification" özelliğini kullanır - bir anahtarın
 /// TTL'den dolayı silindiği anda Redis, "__keyevent@0__:expired" kanalına o anahtarın
 /// adını yayınlar (pub/sub). Bu özellik varsayılan olarak kapalıdır, StartAsync içinde
@@ -17,11 +11,7 @@ namespace ErpApi.Services;
 /// için tetiklenmiştir), sadece adı gelir. Bu yüzden UsersController.Login, session:{token}'ın
 /// yanına daha uzun ömürlü bir "session-meta:{token}" kopyası da yazıyor; buradan
 /// UserId/Username okunup sonra bu kopya da temizleniyor.
-///
-/// Not: Explicit "/logout" çağrısı KeyDeleteAsync ile silme yapar - Redis bunu "del" olayı
-/// olarak yayınlar, "expired" olarak değil. Biz sadece "expired" kanalını dinlediğimiz için
-/// explicit logout'ta bu servis tekrar tetiklenmez, çift log/çift sayaç düşürme olmaz.
-/// </summary>
+
 public class SessionExpiryWatcher : IHostedService
 {
     private readonly IConnectionMultiplexer _redis;
@@ -50,15 +40,12 @@ public class SessionExpiryWatcher : IHostedService
         }
         catch (Exception ex)
         {
-            // Redis'e CONFIG SET izni yoksa (ör. bazı yönetilen Redis servisleri) uygulamanın
-            // tamamı çökmesin; sadece bu özellik pasif kalır, uygulama normal çalışmaya devam eder.
             _logger.LogWarning(ex, "Oturum zaman aşımı dinleyicisi başlatılamadı, otomatik çıkış logları kaydedilmeyecek.");
         }
     }
 
     private void OnKeyExpired(RedisChannel channel, RedisValue expiredKey)
     {
-        // Pub/sub callback'i senkron; asıl işi ayrı bir Task'ta yapıp callback'i hemen bırakıyoruz.
         _ = HandleExpiredKeyAsync(expiredKey.ToString());
     }
 
@@ -67,7 +54,7 @@ public class SessionExpiryWatcher : IHostedService
         const string prefix = "session:";
         if (!expiredKey.StartsWith(prefix, StringComparison.Ordinal))
         {
-            return; // bizi ilgilendirmeyen bir anahtar (ör. failed:*, session-meta:* kendi TTL'iyle düşerse)
+            return; 
         }
 
         string token = expiredKey[prefix.Length..];

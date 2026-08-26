@@ -1,7 +1,4 @@
 # Prometheus'a "nereyi, ne sıklıkla tara" diyen dosya.
-# ErpApi host üzerinde (docker dışında) http://0.0.0.0:5077 adresinde çalışıyor,
-# bu yüzden container içinden host'a ulaşmak için host.docker.internal kullanıyoruz
-# (docker-compose.yml'daki extra_hosts ayarı bunu Linux'ta da çalışır hale getiriyor).
 
 global:
   scrape_interval: 5s # her 5 saniyede bir /metrics'i oku

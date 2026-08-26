@@ -1,5 +1,3 @@
-# Loki'nin minimal "tek node, diskte sakla" yapılandırması.
-
 auth_enabled: false
 
 server:
