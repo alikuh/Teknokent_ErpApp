@@ -4,13 +4,32 @@ global:
   evaluation_interval: 5s
 
 scrape_configs:
+  # Uygulama metrikleri: istek sayacı, login denemeleri, aktif oturum, CPU/RAM...
   - job_name: "erp-api"
     metrics_path: /metrics
     static_configs:
       - targets: ["host.docker.internal:5077"]
+    # /healthmetrics exporter'ı health gauge'larını (healthcheck*) default
+    # registry'ye yazdığı için /metrics de bir kez çalıştıktan sonra onları
+    # içerir - ama /metrics health check'i yeniden koşturmadığından bu değerler
+    # bayat olur. Bayat kopyayı at; healthcheck* sadece myapi-health'ten gelsin.
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: "healthcheck.*"
+        action: drop
 
-  - job_name: 'myapi-health'
+  # Health check sonuçları: /healthmetrics her scrape'te Postgres+Redis check'ini
+  # gerçekten çalıştırır, o yüzden 30s'de bir tarıyoruz.
+  - job_name: "myapi-health"
     metrics_path: /healthmetrics
     scrape_interval: 30s
     static_configs:
       - targets: ["host.docker.internal:5077"]
+    # /healthmetrics TÜM default registry'yi döndürür (erp_active_sessions,
+    # http_requests_received_total, ...). Bunları bırakırsak her metrik iki
+    # job altında iki kez sayılır (stat panelinde "2 aktif oturum", rate'ler
+    # iki katı). Bu job'tan SADECE health gauge'larını tut.
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: "healthcheck.*"
+        action: keep
