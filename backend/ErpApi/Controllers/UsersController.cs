@@ -117,6 +117,7 @@ public class UsersController : ControllerBase
         }
 
         var user = await _context.Users
+            .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Username == request.Username);
 
         try
