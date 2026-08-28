@@ -7,6 +7,9 @@ using StackExchange.Redis;
 using Serilog;
 using Serilog.Sinks.Grafana.Loki;
 using Prometheus;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,9 +50,31 @@ builder.Services.AddHostedService<ErpApi.Services.SessionExpiryWatcher>();
 // Başarılı girişlerde IP'den kaba şehir/ülke tahmini için (bkz. Services/GeoLocationService.cs)
 builder.Services.AddHttpClient<ErpApi.Services.IGeoLocationService, ErpApi.Services.GeoLocationService>();
 
+builder.Services.AddHealthChecks()
+    .AddUrlGroup(new Uri("http://localhost:9090/-/healthy"), 
+        name: "prometheus", 
+        failureStatus: HealthStatus.Degraded,
+        tags: new[] { "monitoring" })
+    .AddUrlGroup(new Uri("http://localhost:3000/api/health"), 
+        name: "grafana", 
+        failureStatus: HealthStatus.Degraded,
+        tags: new[] { "monitoring" })
+    .AddUrlGroup(new Uri("http://localhost:3100/ready"), 
+        name: "loki", 
+        failureStatus: HealthStatus.Degraded,
+        tags: new[] { "monitoring" })
+    .AddUrlGroup(new Uri("http://ip-api.com/json/"), 
+        name: "ip-api", 
+        failureStatus: HealthStatus.Degraded,
+        tags: new[] { "external" });
+
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
+
+builder.Services.AddHealthChecks()
+    .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection")!)
+    .AddRedis("localhost:6379");
 
 // CSRF çerezinin (csrf_token) tarayıcılar arası (frontend farklı porttan
 // servis ediliyor) gidip gelebilmesi için origin'in "*" değil, açıkça
@@ -129,6 +154,25 @@ app.UseMiddleware<ErpApi.Middleware.CsrfMiddleware>();
 // çağırdığı, güvenli (sadece GET) bir "ısındırma" endpoint'i.
 app.MapGet("/api/csrf-token", () => Results.Ok());
 
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                duration = e.Value.Duration.ToString()
+            })
+        });
+        await context.Response.WriteAsync(result);
+    }
+});
 app.MapControllers();
 
 app.Run();
