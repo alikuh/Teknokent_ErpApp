@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using ErpApi.Data;
 using ErpApi.Models;
 using StackExchange.Redis;
@@ -67,7 +69,27 @@ builder.Services.AddCors(options =>
     });
 });
 
+// ngrok, istekleri kendi edge sunucularından yerel makinemize tünelleyerek
+// iletiyor - bu yüzden Kestrel'in gördüğü bağlantı IP'si her zaman
+// loopback (127.0.0.1) olur, gerçek client IP'si sadece X-Forwarded-For
+// header'ında gelir (GeoLocationService ve login rate-limit hep "Yerel ağ"a
+// düşmesinin sebebi buydu). ngrok'un edge IP'leri sabit/bilinen bir liste
+// olmadığından KnownProxies/KnownNetworks kısıtlamasını kaldırıyoruz - yani
+// bu header'a koşulsuz güveniyoruz. Bu üretimde spoofing riski taşır; sadece
+// ngrok arkasında geliştirme/demo amaçlı kabul edilebilir.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var app = builder.Build();
+
+// Pipeline'daki her şeyden önce çalışmalı ki RemoteIpAddress, kendisinden
+// sonraki middleware'lere (loglama, rate-limit, controller'lar) gerçek
+// client IP'siyle ulaşsın.
+app.UseForwardedHeaders();
 
 if (app.Environment.IsDevelopment())
 {
@@ -81,6 +103,16 @@ app.UseSwaggerUI(options =>
 });
 
 app.UseHttpsRedirection();
+
+// frontend/'i doğrudan bu backend'den servis ediyoruz - böylece tek port
+// (ve dışarı açarken tek ngrok tüneli) yeterli oluyor, ayrıca aynı origin
+// olduğu için CORS'a da gerek kalmıyor. Live Server (localhost:5500) ile
+// yerelde geliştirmeye devam edebilirsiniz, o zaman CORS politikası devreye girer.
+var frontendPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "..", "frontend"));
+var frontendFiles = new PhysicalFileProvider(frontendPath);
+app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = frontendFiles });
+app.UseStaticFiles(new StaticFileOptions { FileProvider = frontendFiles });
+
 app.UseCors("AllowFrontend");
 
 // prometheus-net: her isteği method/route/status koduna göre otomatik sayar

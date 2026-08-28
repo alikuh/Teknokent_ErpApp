@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <script src="theme.js"></script>
 <script src="csrf.js"></script>
+<script src="config.js"></script>
 <link rel="stylesheet" href="theme.css">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kayıt Ol | ERP</title>
@@ -205,7 +206,7 @@
 	</div>
 
 	<script>
-		var API_URL = "http://localhost:5077/api";
+		var API_URL = window.API_URL;
 
 		var userInput = document.getElementById("username");
 		var passInput = document.getElementById("password");
