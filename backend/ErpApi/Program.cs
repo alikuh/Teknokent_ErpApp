@@ -19,14 +19,24 @@ var builder = WebApplication.CreateBuilder(args);
 string lokiUrl = builder.Configuration["Loki:Url"] ?? "http://localhost:3100";
 builder.Host.UseSerilog((context, services, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
-    // ASP.NET Core'un kendi "Request starting/finished", "Executing endpoint" gibi
-    // dahili pipeline logları Information seviyesinde çok gürültülü olur ve asıl
-    // audit olaylarını (kim ne yaptı) boğar; appsettings.json'daki niyetle aynı
-    // şekilde bunları Warning'e çekiyoruz.
-    .MinimumLevel.Override("Microsoft.AspNetCore", Serilog.Events.LogEventLevel.Warning)
-    // EF Core her SQL sorgusunu Information seviyesinde tam metniyle loglar
-    // ("Executed DbCommand ...") - bu da audit akışını boğar, aynı sebeple Warning'e çekiyoruz.
-    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", Serilog.Events.LogEventLevel.Warning)
+    .MinimumLevel.Information()
+    // Loki'ye SADECE anlamlı olaylar (audit + gerçek hata/uyarı) gitsin diye
+    // framework gürültüsünü Warning'e çekiyoruz. Bunlar Information seviyesinde
+    // saniyede onlarca satır üretip asıl "kim ne yaptı" loglarını boğuyor:
+    //  - Microsoft.*       : ASP.NET pipeline ("Request starting/finished",
+    //                        "Executing endpoint"), routing, EF Core'un her SQL'i
+    //                        ("Executed DbCommand"), health check "completed" logları
+    //  - System.Net.Http.* : HttpClient'in her isteği "Sending/Received HTTP request"
+    //                        diye loglaması (GeoLocationService + health check'ler)
+    //  - Npgsql.*          : ham PostgreSQL sürücüsünün bağlantı/komut logları
+    //                        (health check'in AddNpgSql'i her 30 sn'de bağlanıyor)
+    // Uygulamanın kendi logları (ErpApi.*) Information'da kalır, etkilenmez.
+    .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+    .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
+    .MinimumLevel.Override("Npgsql", Serilog.Events.LogEventLevel.Warning)
+    // Başlangıçtaki "Now listening on..." / "Application started" satırları faydalı,
+    // onları Information'da tutuyoruz.
+    .MinimumLevel.Override("Microsoft.Hosting.Lifetime", Serilog.Events.LogEventLevel.Information)
     .Enrich.FromLogContext()
     .Enrich.WithProperty("app", "erp-api")
     .WriteTo.Console()
@@ -50,31 +60,27 @@ builder.Services.AddHostedService<ErpApi.Services.SessionExpiryWatcher>();
 // Başarılı girişlerde IP'den kaba şehir/ülke tahmini için (bkz. Services/GeoLocationService.cs)
 builder.Services.AddHttpClient<ErpApi.Services.IGeoLocationService, ErpApi.Services.GeoLocationService>();
 
-builder.Services.AddHealthChecks()
-    .AddUrlGroup(new Uri("http://localhost:9090/-/healthy"), 
-        name: "prometheus", 
-        failureStatus: HealthStatus.Degraded,
-        tags: new[] { "monitoring" })
-    .AddUrlGroup(new Uri("http://localhost:3000/api/health"), 
-        name: "grafana", 
-        failureStatus: HealthStatus.Degraded,
-        tags: new[] { "monitoring" })
-    .AddUrlGroup(new Uri("http://localhost:3100/ready"), 
-        name: "loki", 
-        failureStatus: HealthStatus.Degraded,
-        tags: new[] { "monitoring" })
-    .AddUrlGroup(new Uri("http://ip-api.com/json/"), 
-        name: "ip-api", 
-        failureStatus: HealthStatus.Degraded,
-        tags: new[] { "external" });
-
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 
+// Health check: sadece API'nin çalışması için ŞART olan bağımlılıkları kontrol
+// eder - Postgres ve Redis. Monitoring yığını (Prometheus/Grafana/Loki) ve dış
+// servisler (ip-api) bilerek DIŞARIDA: onların düşmesi API'yi durdurmaz, ayrıca
+// /healthmetrics her Prometheus scrape'inde bu check'leri çalıştırdığı için
+// buraya yavaş/dış HTTP çağrısı koymak istekleri biriktirip sunucuyu kilitler.
+// timeout: bir bağımlılık asılı kalırsa 3 sn sonra "unhealthy" de, sonsuz bekleme.
 builder.Services.AddHealthChecks()
-    .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection")!)
-    .AddRedis("localhost:6379");
+    .AddNpgSql(
+        builder.Configuration.GetConnectionString("DefaultConnection")!,
+        name: "postgres",
+        timeout: TimeSpan.FromSeconds(3))
+    .AddRedis(
+        // Yeni bağlantı açma; Program.cs'te zaten kayıtlı olan singleton
+        // ConnectionMultiplexer'ı tekrar kullan.
+        sp => sp.GetRequiredService<IConnectionMultiplexer>(),
+        name: "redis",
+        timeout: TimeSpan.FromSeconds(3));
 
 // CSRF çerezinin (csrf_token) tarayıcılar arası (frontend farklı porttan
 // servis ediliyor) gidip gelebilmesi için origin'in "*" değil, açıkça
