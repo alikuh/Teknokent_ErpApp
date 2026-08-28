@@ -64,12 +64,15 @@ builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 
-// Health check: sadece API'nin çalışması için ŞART olan bağımlılıkları kontrol
-// eder - Postgres ve Redis. Monitoring yığını (Prometheus/Grafana/Loki) ve dış
-// servisler (ip-api) bilerek DIŞARIDA: onların düşmesi API'yi durdurmaz, ayrıca
-// /healthmetrics her Prometheus scrape'inde bu check'leri çalıştırdığı için
-// buraya yavaş/dış HTTP çağrısı koymak istekleri biriktirip sunucuyu kilitler.
-// timeout: bir bağımlılık asılı kalırsa 3 sn sonra "unhealthy" de, sonsuz bekleme.
+// Health check.
+//  - postgres / redis: API'nin çalışması için ŞART. Biri düşerse /health -> 503.
+//  - ngrok: KRITIK DEĞİL (yerel kullanıcılar tünel olmadan da çalışır), o yüzden
+//    failureStatus=Degraded -> düşse bile /health 200 kalır, sadece panelde
+//    "DOWN" görünür. Yerel agent API'sine (localhost:4040) bakar, hızlıdır.
+// Monitoring yığını (Prometheus/Grafana/Loki) ve ip-api bilerek DIŞARIDA:
+// onları Prometheus doğrudan tarıyor (up{job=...}), buraya yavaş/dış HTTP
+// çağrısı koymak /healthmetrics scrape'inde istekleri biriktirip sunucuyu kilitler.
+// timeout: bir bağımlılık asılı kalırsa birkaç sn sonra "unhealthy" de, sonsuz bekleme.
 builder.Services.AddHealthChecks()
     .AddNpgSql(
         builder.Configuration.GetConnectionString("DefaultConnection")!,
@@ -80,7 +83,16 @@ builder.Services.AddHealthChecks()
         // ConnectionMultiplexer'ı tekrar kullan.
         sp => sp.GetRequiredService<IConnectionMultiplexer>(),
         name: "redis",
-        timeout: TimeSpan.FromSeconds(3));
+        timeout: TimeSpan.FromSeconds(3))
+    .AddUrlGroup(
+        // API host'ta çalıştığı için localhost; ileride konteynerleşirse
+        // host.docker.internal:4040 olur. --inspect=false ile başlatılırsa
+        // 4040 açılmaz, o zaman kendi --web-addr adresine göre güncelle.
+        new Uri("http://localhost:4040/api/tunnels"),
+        name: "ngrok",
+        failureStatus: HealthStatus.Degraded,
+        tags: new[] { "tunnel" },
+        timeout: TimeSpan.FromSeconds(2));
 
 // CSRF çerezinin (csrf_token) tarayıcılar arası (frontend farklı porttan
 // servis ediliyor) gidip gelebilmesi için origin'in "*" değil, açıkça

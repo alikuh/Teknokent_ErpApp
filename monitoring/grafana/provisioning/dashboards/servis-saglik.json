@@ -1,0 +1,123 @@
+{
+  "title": "Servis Sağlık Durumu",
+  "uid": "servis-saglik",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "timezone": "browser",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "refresh": "10s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Servis Sağlık Durumu",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "description": "postgres / redis / ngrok: API'nin health check sonucu (2=Healthy, 1=Degraded, 0=Unhealthy). erp-api / prometheus / loki / grafana: Prometheus o hedefi tarayabiliyor mu (up*2: 2=ayakta, 0=düştü). ngrok Degraded ise tünel yok demektir.",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "format": "table",
+          "instant": true,
+          "expr": "label_replace(healthcheck, \"servis\", \"$1\", \"name\", \"(.+)\") or label_replace(up{job=~\"erp-api|prometheus|loki|grafana\"} * 2, \"servis\", \"$1\", \"job\", \"(.+)\")"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "instance": true,
+              "job": true,
+              "name": true
+            },
+            "renameByName": {
+              "servis": "Servis",
+              "Value": "Durum"
+            },
+            "indexByName": {
+              "servis": 0,
+              "Value": 1
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Servis"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Durum"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              },
+              {
+                "id": "custom.align",
+                "value": "center"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": { "text": "Down", "color": "red", "index": 0 },
+                      "1": { "text": "Degraded", "color": "orange", "index": 1 },
+                      "2": { "text": "Healthy", "color": "green", "index": 2 }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "md"
+      }
+    }
+  ]
+}

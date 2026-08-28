@@ -31,7 +31,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "erp_active_sessions",
+          "expr": "erp_active_sessions{job=\"erp-api\"}",
           "legendFormat": "aktif oturum"
         }
       ]
@@ -56,7 +56,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (result) (rate(erp_login_attempts_total[1m]))",
+          "expr": "sum by (result) (rate(erp_login_attempts_total{job=\"erp-api\"}[1m]))",
           "legendFormat": "{{result}}"
         }
       ]
@@ -81,7 +81,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (method, code, action) (label_replace(rate(http_requests_received_total{controller=\"Dashboard\"}[1m]), \"action\", \"Dashboard'a bakma\", \"action\", \".*\") or rate(http_requests_received_total{controller!=\"Dashboard\"}[1m]))",
+          "expr": "sum by (method, code, action) (label_replace(rate(http_requests_received_total{job=\"erp-api\", controller=\"Dashboard\"}[1m]), \"action\", \"Dashboard'a bakma\", \"action\", \".*\") or rate(http_requests_received_total{job=\"erp-api\", controller!=\"Dashboard\"}[1m]))",
           "legendFormat": "{{method}} {{action}} ({{code}})"
         }
       ]
@@ -216,6 +216,73 @@
           },
           "expr": "dotnet_total_memory_bytes{job=\"erp-api\"}",
           "legendFormat": "GC Managed Heap"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Servis Durumu",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      },
+      "description": "up{...}: Prometheus hedefi tarayabiliyor mu (1/0). healthcheck == 2: API'nin check sonucu Healthy mi (postgres/redis/ngrok); Degraded veya Unhealthy ise DOWN gösterir.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "DOWN", "color": "red" },
+                "1": { "text": "UP", "color": "green" }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "up{job=~\"erp-api|prometheus|loki|grafana\"}",
+          "legendFormat": "{{job}}",
+          "instant": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "healthcheck == bool 2",
+          "legendFormat": "{{name}}",
+          "instant": true
         }
       ]
     }

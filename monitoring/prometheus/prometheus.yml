@@ -33,3 +33,20 @@ scrape_configs:
       - source_labels: [__name__]
         regex: "healthcheck.*"
         action: keep
+
+  # İzleme yığınının kendisi. Her hedef için Prometheus otomatik bir
+  # up{job="..."} metriği üretir (1=ayakta, 0=erişilemiyor). Grafana'daki
+  # "Servis Durumu" paneli bunları gösterir. Bu servisler compose ağında
+  # olduğu için birbirlerine servis adıyla erişir; Prometheus kendine
+  # localhost'tan bakar.
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "loki"
+    static_configs:
+      - targets: ["loki:3100"]
+
+  - job_name: "grafana"
+    static_configs:
+      - targets: ["grafana:3000"]
