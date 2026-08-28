@@ -1,11 +1,16 @@
 # Prometheus'a "nereyi, ne sıklıkla tara" diyen dosya.
 
 global:
-  scrape_interval: 5s # her 5 saniyede bir /metrics'i oku
+  scrape_interval: 5s
   evaluation_interval: 5s
 
 scrape_configs:
   - job_name: "erp-api"
     metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:5077"]
+
+  - job_name: 'myapi-health'
+    metrics_path: /healthmetrics
     static_configs:
       - targets: ["host.docker.internal:5077"]

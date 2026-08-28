@@ -154,6 +154,11 @@ app.UseMiddleware<ErpApi.Middleware.CsrfMiddleware>();
 // çağırdığı, güvenli (sadece GET) bir "ısındırma" endpoint'i.
 app.MapGet("/api/csrf-token", () => Results.Ok());
 
+app.UseHealthChecksPrometheusExporter("/healthmetrics", options =>
+{
+    options.ResultStatusCodes[HealthStatus.Healthy] = StatusCodes.Status200OK;
+});
+
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     ResponseWriter = async (context, report) =>
