@@ -1,0 +1,21 @@
+{
+  "stryker-config": {
+    "project": "ErpApi.csproj",
+    "project-info": {
+      "name": "erp-app/backend/ErpApi",
+      "module": "ErpApi"
+    },
+    "mutate": [
+      "Services/PasswordHasher.cs"
+    ],
+    "reporters": [
+      "html",
+      "progress"
+    ],
+    "thresholds": {
+      "high": 80,
+      "low": 60,
+      "break": 0
+    }
+  }
+}
