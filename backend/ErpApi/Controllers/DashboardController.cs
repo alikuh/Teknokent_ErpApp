@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ErpApi.Data;
+using ErpApi.Models;
 using ErpApi.Services;
 using StackExchange.Redis;
 
@@ -12,11 +13,22 @@ public class DashboardController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly IConnectionMultiplexer _redis;
+    private readonly LedgerRepository _ledgerRepo;
+    private readonly LedgerService _ledger;
+    private readonly decimal _defaultCriticalThreshold;
 
-    public DashboardController(AppDbContext context, IConnectionMultiplexer redis)
+    public DashboardController(
+        AppDbContext context,
+        IConnectionMultiplexer redis,
+        LedgerRepository ledgerRepo,
+        LedgerService ledger,
+        IConfiguration configuration)
     {
         _context = context;
         _redis = redis;
+        _ledgerRepo = ledgerRepo;
+        _ledger = ledger;
+        _defaultCriticalThreshold = configuration.GetValue<decimal?>("Erp:CriticalStockThreshold") ?? 25m;
     }
 
     // GET: api/dashboard/summary
@@ -26,86 +38,150 @@ public class DashboardController : ControllerBase
         var userId = await AuthHelper.GetUserIdAsync(_redis, token);
         if (userId == null) return Unauthorized("Giriş yapmalısınız.");
 
-        var today = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
-        var startOfWeek = DateTime.SpecifyKind(today.AddDays(-(int)today.DayOfWeek), DateTimeKind.Utc);
-        var startOfMonth = DateTime.SpecifyKind(new DateTime(today.Year, today.Month, 1), DateTimeKind.Utc);
+        var (receipts, payments) = await _ledgerRepo.LoadAsync(userId.Value);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var monthStart = new DateOnly(today.Year, today.Month, 1);
 
-        var salesQuery = _context.Sales.Include(s => s.Product).Where(s => s.Product!.UserId == userId);
+        var balances = _ledger.GetBalances(receipts, payments);
+        var openReceivables = balances.Values.Sum();
+        var debtorCount = balances.Count(b => b.Value > 0);
 
-        var dailyTotal = await salesQuery.Where(s => s.SoldAt >= today).SumAsync(s => s.TotalPrice);
-        var weeklyTotal = await salesQuery.Where(s => s.SoldAt >= startOfWeek).SumAsync(s => s.TotalPrice);
-        var monthlyTotal = await salesQuery.Where(s => s.SoldAt >= startOfMonth).SumAsync(s => s.TotalPrice);
+        var todayReceipts = receipts.Where(r => r.Date == today).ToList();
+        var monthPayments = payments.Where(p => p.Date >= monthStart).ToList();
 
-        var productsQuery = _context.Products.Where(p => p.UserId == userId);
-        var totalProducts = await productsQuery.CountAsync();
-        var totalStock = await productsQuery.SumAsync(p => p.StockQuantity);
-        var lowStockProducts = await productsQuery.Where(p => p.StockQuantity < 10).CountAsync();
+        var products = await _context.Products.AsNoTracking()
+            .Where(p => p.UserId == userId)
+            .ToListAsync();
+        var criticalStockCount = products.Count(IsCritical);
 
         return Ok(new
         {
-            dailySales = dailyTotal,
-            weeklySales = weeklyTotal,
-            monthlySales = monthlyTotal,
-            totalProducts,
-            totalStock,
-            lowStockProducts
+            openReceivables,
+            debtorCount,
+            todaySales = todayReceipts.Sum(r => r.Total),
+            todayReceiptCount = todayReceipts.Count,
+            monthCollected = monthPayments.Sum(p => p.Amount),
+            monthPaymentCount = monthPayments.Count,
+            criticalStockCount
         });
     }
 
-    // GET: api/dashboard/sales-by-day?days=7
-    [HttpGet("sales-by-day")]
-    public async Task<ActionResult> GetSalesByDay([FromQuery] int days, [FromHeader(Name = "Authorization")] string? token)
+    // GET: api/dashboard/top-debtors?count=8
+    [HttpGet("top-debtors")]
+    public async Task<ActionResult> GetTopDebtors([FromQuery] int count, [FromHeader(Name = "Authorization")] string? token)
     {
-        if (days <= 0) days = 7;
-
         var userId = await AuthHelper.GetUserIdAsync(_redis, token);
         if (userId == null) return Unauthorized("Giriş yapmalısınız.");
 
-        var startDate = DateTime.SpecifyKind(DateTime.UtcNow.Date.AddDays(-days + 1), DateTimeKind.Utc);
+        if (count <= 0) count = 8;
 
-        var sales = await _context.Sales
-            .Include(s => s.Product)
-            .Where(s => s.Product!.UserId == userId && s.SoldAt >= startDate)
-            .ToListAsync();
+        var (receipts, payments) = await _ledgerRepo.LoadAsync(userId.Value);
+        var balances = _ledger.GetBalances(receipts, payments);
+        var lastMove = LastMovement(receipts, payments);
 
-        var grouped = sales
-            .GroupBy(s => s.SoldAt.Date)
-            .Select(g => new
-            {
-                date = g.Key.ToString("yyyy-MM-dd"),
-                totalRevenue = g.Sum(s => s.TotalPrice),
-                totalQuantity = g.Sum(s => s.Quantity)
-            })
-            .OrderBy(x => x.date)
+        var debtorIds = balances.Where(b => b.Value > 0)
+            .OrderByDescending(b => b.Value)
+            .Take(count)
+            .Select(b => b.Key)
             .ToList();
 
-        return Ok(grouped);
+        var customers = await _context.Customers.AsNoTracking()
+            .Where(c => debtorIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id);
+
+        var rows = debtorIds.Select(id =>
+        {
+            var c = customers.GetValueOrDefault(id);
+            return new
+            {
+                customerId = id,
+                name = c?.Name ?? "(silinmiş)",
+                village = c?.Village,
+                lastMovement = lastMove.TryGetValue(id, out var d) ? d : (DateOnly?)null,
+                balance = balances[id]
+            };
+        });
+
+        return Ok(rows);
     }
 
-    // GET: api/dashboard/top-products?count=5
-    [HttpGet("top-products")]
-    public async Task<ActionResult> GetTopProducts([FromQuery] int count, [FromHeader(Name = "Authorization")] string? token)
+    // GET: api/dashboard/recent-movements?count=8
+    [HttpGet("recent-movements")]
+    public async Task<ActionResult> GetRecentMovements([FromQuery] int count, [FromHeader(Name = "Authorization")] string? token)
     {
-        if (count <= 0) count = 5;
-
         var userId = await AuthHelper.GetUserIdAsync(_redis, token);
         if (userId == null) return Unauthorized("Giriş yapmalısınız.");
 
-        var topProducts = await _context.Sales
-            .Include(s => s.Product)
-            .Where(s => s.Product!.UserId == userId)
-            .GroupBy(s => new { s.ProductId, s.Product!.Name })
-            .Select(g => new
+        if (count <= 0) count = 8;
+
+        var (receipts, payments) = await _ledgerRepo.LoadAsync(userId.Value);
+
+        var customers = await _context.Customers.AsNoTracking()
+            .Where(c => c.UserId == userId)
+            .ToDictionaryAsync(c => c.Id);
+
+        var moves = receipts
+            .Select(r => new
             {
-                productId = g.Key.ProductId,
-                productName = g.Key.Name,
-                totalSold = g.Sum(s => s.Quantity),
-                totalRevenue = g.Sum(s => s.TotalPrice)
+                date = r.Date,
+                order = r.CreatedAt,
+                name = customers.GetValueOrDefault(r.CustomerId)?.Name ?? "(silinmiş)",
+                kind = r.Type.ToString().ToLowerInvariant(),
+                amount = r.Total
             })
-            .OrderByDescending(x => x.totalSold)
+            .Concat(payments.Select(p => new
+            {
+                date = p.Date,
+                order = p.CreatedAt,
+                name = customers.GetValueOrDefault(p.CustomerId)?.Name ?? "(silinmiş)",
+                kind = "tahsilat",
+                amount = p.Amount
+            }))
+            .OrderByDescending(m => m.date)
+            .ThenByDescending(m => m.order)
             .Take(count)
+            .Select(m => new { m.date, m.name, m.kind, m.amount });
+
+        return Ok(moves);
+    }
+
+    // GET: api/dashboard/low-stock
+    [HttpGet("low-stock")]
+    public async Task<ActionResult> GetLowStock([FromHeader(Name = "Authorization")] string? token)
+    {
+        var userId = await AuthHelper.GetUserIdAsync(_redis, token);
+        if (userId == null) return Unauthorized("Giriş yapmalısınız.");
+
+        var products = await _context.Products.AsNoTracking()
+            .Where(p => p.UserId == userId)
             .ToListAsync();
 
-        return Ok(topProducts);
+        var rows = products
+            .Where(IsCritical)
+            .OrderBy(p => p.Stock)
+            .Select(p => new
+            {
+                p.Id,
+                p.Name,
+                p.Unit,
+                p.Stock,
+                threshold = p.CriticalStockThreshold ?? _defaultCriticalThreshold
+            });
+
+        return Ok(rows);
+    }
+
+    private bool IsCritical(Product p)
+        => p.Stock < (p.CriticalStockThreshold ?? _defaultCriticalThreshold);
+
+    private static Dictionary<int, DateOnly> LastMovement(
+        IEnumerable<Receipt> receipts, IEnumerable<Payment> payments)
+    {
+        var map = new Dictionary<int, DateOnly>();
+        foreach (var r in receipts)
+            if (!map.TryGetValue(r.CustomerId, out var d) || r.Date > d) map[r.CustomerId] = r.Date;
+        foreach (var p in payments)
+            if (!map.TryGetValue(p.CustomerId, out var d) || p.Date > d) map[p.CustomerId] = p.Date;
+        return map;
     }
 }

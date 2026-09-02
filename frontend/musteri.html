@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veresiye · Müşteri</title>
+    <link rel="stylesheet" href="industry.css">
+    <link rel="stylesheet" href="app.css">
+    <script src="config.js"></script>
+    <script src="csrf.js"></script>
+    <script src="app-shell.js"></script>
+</head>
+
+<body>
+    <div class="layout">
+        <aside id="app-nav"></aside>
+        <main class="main">
+            <a class="btn-link" href="musteriler.html">← Müşteri listesi</a>
+
+            <header style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--color-divider);padding-bottom:16px;margin-top:10px">
+                <div>
+                    <h1 id="c-name">…</h1>
+                    <p id="c-sub" class="muted"></p>
+                </div>
+                <div style="display:flex;gap:10px">
+                    <a class="btn" id="go-satis">Fiş kes</a>
+                    <a class="btn primary" id="go-tahsilat">Tahsilat al</a>
+                </div>
+            </header>
+
+            <div class="kpi-grid" id="c-kpis" style="margin-top:22px"></div>
+
+            <div class="grid-main-aside">
+                <section>
+                    <h3 style="font-size:22px;margin:0 0 10px">Hesap ekstresi</h3>
+                    <div class="table-wrap">
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>Tarih</th>
+                                    <th>Hareket</th>
+                                    <th class="num">Borç</th>
+                                    <th class="num">Alacak</th>
+                                    <th class="num">Bakiye</th>
+                                </tr>
+                            </thead>
+                            <tbody id="statement"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section style="display:flex;flex-direction:column;gap:18px">
+                    <div style="border:1px solid var(--color-divider);padding:16px">
+                        <div class="field">
+                            <label>Müşteri notu</label>
+                            <textarea id="note" rows="4" placeholder="Örn. hasatta kapatır"></textarea>
+                        </div>
+                        <button class="btn small" id="save-note" style="margin-top:8px">Notu kaydet</button>
+                        <span class="flash" id="note-flash"></span>
+                    </div>
+                    <div style="border:1px solid var(--color-divider);padding:16px">
+                        <div style="font-family:var(--font-heading);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:8px">
+                            En çok aldığı</div>
+                        <div id="top-products"></div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <div class="overlay" id="session-expired-overlay">
+        <div class="modal" style="width:360px;text-align:center">
+            <h3>Oturum süresi doldu</h3>
+            <p class="muted">Güvenliğin için oturumun sona erdi. Devam etmek için tekrar giriş yap.</p>
+            <div class="modal-actions" style="justify-content:center">
+                <button class="btn primary" onclick="Shell.logout()">Tamam</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var S = window.Shell;
+            var id = new URLSearchParams(location.search).get("id");
+            if (!id) { location.replace("musteriler.html"); return; }
+
+            document.getElementById("go-satis").href = "satis.html?customer=" + id;
+            document.getElementById("go-tahsilat").href = "tahsilat.html?customer=" + id;
+            document.getElementById("save-note").addEventListener("click", saveNote);
+
+            var current = null;
+
+            async function init() {
+                try {
+                    current = await S.apiJson("/customers/" + id);
+                } catch (e) {
+                    document.getElementById("c-name").textContent = "Müşteri bulunamadı";
+                    return;
+                }
+                document.getElementById("c-name").textContent = current.name;
+                document.getElementById("c-sub").textContent =
+                    [current.village, current.phone, S.dtext(current.createdAt) + " tarihinden beri müşteri"]
+                        .filter(Boolean).join(" · ");
+                document.getElementById("note").value = current.note || "";
+
+                renderKpis(current.kpis);
+                renderStatement(current.statement);
+                renderTopProducts(current.topProducts);
+            }
+
+            function renderKpis(k) {
+                var owes = k.balance > 0;
+                document.getElementById("c-kpis").innerHTML = [
+                    kpi(owes ? "debt" : "paid", "Güncel bakiye", S.money(k.balance)),
+                    kpi("", "Toplam alışveriş", S.money(k.totalPurchases)),
+                    kpi("warn", "Açık fiş", String(k.openReceiptCount)),
+                    kpi("ink", "Son tahsilat", k.lastPaymentDate ? S.dtext(k.lastPaymentDate) : "—")
+                ].join("");
+            }
+            function kpi(cls, label, value) {
+                return '<div class="kpi ' + cls + '"><div class="label">' + label + '</div>' +
+                    '<div class="value">' + value + '</div></div>';
+            }
+
+            function renderStatement(rows) {
+                var body = document.getElementById("statement");
+                if (!rows.length) {
+                    body.innerHTML = '<tr><td colspan="5" class="muted" style="text-align:center;padding:24px">Hareket yok.</td></tr>';
+                    return;
+                }
+                // En yeni üstte
+                body.innerHTML = rows.slice().reverse().map(function (s) {
+                    var title = s.kind === "tahsilat" ? "Tahsilat"
+                        : (s.receiptId ? "F-" + s.receiptId + " · " : "") +
+                          (s.kind === "veresiye" ? "Veresiye fiş" : s.kind === "nakit" ? "Nakit satış" : "Kart satış");
+                    return '<tr>' +
+                        '<td style="white-space:nowrap">' + S.dtext(s.date) + '</td>' +
+                        '<td><div style="font-weight:500">' + S.esc(title) + '</div>' +
+                        '<div class="muted" style="font-size:13px">' + S.esc(s.detail || "") + '</div></td>' +
+                        '<td class="num" style="color:var(--c-debt-deep)">' + (s.debit > 0 ? S.money(s.debit) : "—") + '</td>' +
+                        '<td class="num" style="color:var(--c-paid-deep)">' + (s.credit > 0 ? S.money(s.credit) : (s.kind === "veresiye" ? "" : S.money(0) + " peşin")) + '</td>' +
+                        '<td class="amount ' + (s.running > 0 ? "debt" : "paid") + '">' + S.money(s.running) + '</td></tr>';
+                }).join("");
+            }
+
+            function renderTopProducts(rows) {
+                var box = document.getElementById("top-products");
+                if (!rows.length) { box.innerHTML = '<p class="muted" style="margin:0">Henüz alışveriş yok.</p>'; return; }
+                box.innerHTML = rows.map(function (p) {
+                    return '<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--color-divider)">' +
+                        '<span>' + S.esc(p.name) + '</span>' +
+                        '<span class="muted" style="white-space:nowrap">' + S.qty(p.qty) + '</span></div>';
+                }).join("");
+            }
+
+            async function saveNote() {
+                try {
+                    await S.apiJson("/customers/" + id, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            name: current.name,
+                            village: current.village,
+                            phone: current.phone,
+                            note: document.getElementById("note").value
+                        })
+                    });
+                    document.getElementById("note-flash").textContent = "Not kaydedildi.";
+                    setTimeout(function () { document.getElementById("note-flash").textContent = ""; }, 2500);
+                } catch (e) {
+                    var f = document.getElementById("note-flash");
+                    f.className = "flash error"; f.textContent = e.message || "Kaydedilemedi.";
+                }
+            }
+
+            init();
+        })();
+    </script>
+</body>
+
+</html>

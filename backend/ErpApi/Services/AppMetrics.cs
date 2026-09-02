@@ -23,4 +23,16 @@ public static class AppMetrics
         {
             LabelNames = new[] { "scope" }
         });
+
+    public static readonly Counter ReceiptsCreatedTotal = Metrics.CreateCounter(
+        "erp_receipts_created_total",
+        "Kaydedilen satış fişi sayısı (türüne göre: Veresiye/Nakit/Kart).",
+        new CounterConfiguration
+        {
+            LabelNames = new[] { "type" }
+        });
+
+    public static readonly Counter PaymentsCreatedTotal = Metrics.CreateCounter(
+        "erp_payments_created_total",
+        "Kaydedilen tahsilat sayısı.");
 }

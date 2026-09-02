@@ -3,256 +3,94 @@
 
 <head>
 	<meta charset="UTF-8">
-	<script src="theme.js"></script>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Giriş · Veresiye Defteri</title>
+	<link rel="stylesheet" href="industry.css">
+	<link rel="stylesheet" href="app.css">
 	<script src="csrf.js"></script>
 	<script src="config.js"></script>
-	<link rel="stylesheet" href="theme.css">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Giriş | ERP</title>
 	<style>
-		* {
-			box-sizing: border-box;
+		body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+		.auth-card {
+			position: relative; width: 360px;
+			border: 1px solid var(--color-divider); background: var(--color-surface);
+			padding: 36px 32px 28px;
 		}
-
-		body {
-			margin: 0;
-			min-height: 100vh;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			background: linear-gradient(135deg, var(--color-bg-start) 0%, var(--color-bg-end) 100%);
-			font-family: -apple-system, Segoe UI, Roboto, Tahoma, sans-serif;
+		.auth-kicker {
+			font-family: var(--font-heading); font-size: 12px;
+			letter-spacing: .14em; text-transform: uppercase; color: var(--color-accent-700);
 		}
-
-		.card {
-			background: var(--color-surface);
-			width: 340px;
-			padding: 38px 34px 30px;
-			border-radius: 14px;
-			box-shadow: var(--shadow-card-lg);
-		}
-
-		.badge {
-			width: 46px;
-			height: 46px;
-			margin: 0 auto 16px;
-			border-radius: 12px;
-			background: linear-gradient(135deg, var(--color-accent), var(--color-accent-dark));
-			color: #fff;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			font-weight: 700;
-			font-size: 15px;
-			letter-spacing: 0.5px;
-		}
-
-		.card h1 {
-			font-size: 19px;
-			margin: 0 0 4px;
-			text-align: center;
-			color: var(--color-text);
-		}
-
-		.subtitle {
-			text-align: center;
-			font-size: 13px;
-			color: var(--color-text-muted);
-			margin: 0 0 24px;
-		}
-
-		label {
-			display: block;
-			font-size: 12px;
-			font-weight: 600;
-			color: var(--color-text-secondary);
-			margin-bottom: 5px;
-		}
-
-		.field {
-			margin-bottom: 15px;
-		}
-
-		.input-wrap {
-			position: relative;
-		}
-
-		.input-wrap svg {
-			position: absolute;
-			left: 11px;
-			top: 50%;
-			transform: translateY(-50%);
-			width: 15px;
-			height: 15px;
-			color: var(--color-text-faint);
-		}
-
-		input {
-			width: 100%;
-			padding: 10px 12px 10px 34px;
-			border: 1.5px solid var(--color-border);
-			border-radius: 8px;
-			font-size: 14px;
-			background: var(--color-input-bg);
-			color: var(--color-text);
-			transition: border-color .15s ease, background .15s ease;
-		}
-
-		input:focus {
-			outline: none;
-			border-color: var(--color-accent);
-			background: var(--color-input-bg-focus);
-		}
-
-		.submit-btn {
-			width: 100%;
-			padding: 11px;
-			margin-top: 8px;
-			border: none;
-			border-radius: 8px;
-			background: var(--color-accent);
-			color: #fff;
-			font-size: 14px;
-			font-weight: 600;
-			cursor: pointer;
-			transition: background .15s ease, transform .1s ease;
-		}
-
-		.submit-btn:hover {
-			background: var(--color-accent-hover);
-		}
-
-		.submit-btn:active {
-			transform: translateY(1px);
-		}
-
-		.submit-btn:disabled {
-			background: var(--color-disabled-bg);
-			cursor: default;
-			transform: none;
-		}
-
-		.msg {
-			min-height: 16px;
-			text-align: center;
-			font-size: 13px;
-			margin-top: 12px;
-		}
-
-		.msg.err {
-			color: var(--color-danger);
-		}
-
-		.switch {
-			text-align: center;
-			font-size: 13px;
-			margin-top: 20px;
-			padding-top: 18px;
-			border-top: 1px solid var(--color-border-light);
-			color: var(--color-text-muted);
-		}
-
-		.switch a {
-			color: var(--color-accent);
-			text-decoration: none;
-			font-weight: 600;
-		}
-
-		.switch a:hover {
-			text-decoration: underline;
+		.auth-card h1 { font-size: 27px; margin: 2px 0 4px; }
+		.auth-card .lead { color: var(--color-neutral-700); margin: 0 0 22px; font-size: 14px; }
+		.auth-card .field { margin-bottom: 14px; }
+		.auth-card .btn { width: 100%; justify-content: center; margin-top: 6px; }
+		.auth-msg { min-height: 18px; font-size: 13px; margin-top: 12px; color: var(--c-debt-deep); }
+		.auth-msg.ok { color: var(--c-paid-deep); }
+		.auth-switch {
+			margin-top: 20px; padding-top: 16px; font-size: 13px;
+			border-top: 1px solid var(--color-divider); color: var(--color-neutral-700);
 		}
 	</style>
 </head>
 
 <body>
-
-	<div class="card">
-		<div class="badge">ERP</div>
-		<h1>Hesabına giriş yap</h1>
-		<p class="subtitle">Devam etmek için bilgilerini gir</p>
+	<div class="auth-card">
+		<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+		<div class="auth-kicker">Veresiye Defteri</div>
+		<h1>Giriş yap</h1>
+		<p class="lead">Dükkânın hesabına devam et.</p>
 
 		<div class="field">
 			<label for="username">Kullanıcı adı</label>
-			<div class="input-wrap">
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<circle cx="12" cy="8" r="4" />
-					<path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
-				</svg>
-				<input id="username" type="text" autocomplete="username">
-			</div>
+			<input id="username" type="text" autocomplete="username">
 		</div>
-
 		<div class="field">
 			<label for="password">Şifre</label>
-			<div class="input-wrap">
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<rect x="5" y="11" width="14" height="9" rx="2" />
-					<path d="M8 11V7a4 4 0 0 1 8 0v4" />
-				</svg>
-				<input id="password" type="password" autocomplete="current-password">
-			</div>
+			<input id="password" type="password" autocomplete="current-password">
 		</div>
 
-		<button id="loginBtn" class="submit-btn">Giriş yap</button>
-		<div id="msg" class="msg"></div>
+		<button id="loginBtn" class="btn primary">Giriş yap</button>
+		<div id="msg" class="auth-msg"></div>
 
-		<div class="switch">
-			Hesabın yok mu? <a href="register.html">Kayıt ol</a>
-		</div>
+		<div class="auth-switch">Hesabın yok mu? <a href="register.html">Kayıt ol</a></div>
 	</div>
 
 	<script>
 		var API_URL = window.API_URL;
-
 		var userInput = document.getElementById("username");
 		var passInput = document.getElementById("password");
 		var msgBox = document.getElementById("msg");
 		var loginBtn = document.getElementById("loginBtn");
 
-		// Sayfa acilir acilmaz csrf_token cerezini olustursun diye - asagidaki
-		// login istegi ilk API cagrisi oldugu icin, o an cerez henuz olmayabilir.
+		if (sessionStorage.getItem("token")) window.location.replace("dashboard.html");
+
 		CsrfHelper.prime(API_URL);
 
-		function showMsg(text) {
+		function showMsg(text, ok) {
 			msgBox.textContent = text;
-			msgBox.className = text ? "msg err" : "msg";
+			msgBox.className = "auth-msg" + (ok ? " ok" : "");
 		}
 
 		async function doLogin() {
 			var user = userInput.value.trim();
 			var pass = passInput.value;
-
 			showMsg("");
-
-			if (!user || !pass) {
-				showMsg("Kullanıcı adı ve şifreni gir.");
-				return;
-			}
+			if (!user || !pass) { showMsg("Kullanıcı adı ve şifreni gir."); return; }
 
 			loginBtn.disabled = true;
-			loginBtn.textContent = "Giriş yapılıyor...";
-
+			loginBtn.textContent = "Giriş yapılıyor…";
 			try {
 				var res = await fetch(API_URL + "/users/login", {
 					method: "POST",
 					credentials: "include",
-					headers: {
-						"Content-Type": "application/json",
-						"X-CSRF-Token": CsrfHelper.getToken()
-					},
+					headers: { "Content-Type": "application/json", "X-CSRF-Token": CsrfHelper.getToken() },
 					body: JSON.stringify({ username: user, password: pass })
 				});
-
-				if (!res.ok) {
-					var errTxt = await res.text();
-					showMsg(errTxt || "Kullanıcı adı veya şifre hatalı.");
-					return;
-				}
-
+				if (!res.ok) { showMsg((await res.text()) || "Kullanıcı adı veya şifre hatalı."); return; }
 				var data = await res.json();
 				sessionStorage.setItem("token", data.token);
 				sessionStorage.setItem("username", data.username);
-				window.location.href = "products.html";
+				window.location.href = "dashboard.html";
 			} catch (e) {
 				showMsg("Sunucuya ulaşılamıyor.");
 			} finally {
@@ -262,12 +100,8 @@
 		}
 
 		loginBtn.addEventListener("click", doLogin);
-
-		passInput.addEventListener("keydown", function (e) {
-			if (e.key === "Enter") doLogin();
-		});
+		passInput.addEventListener("keydown", function (e) { if (e.key === "Enter") doLogin(); });
 	</script>
-
 </body>
 
 </html>

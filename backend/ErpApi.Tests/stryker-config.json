@@ -6,7 +6,8 @@
       "module": "ErpApi"
     },
     "mutate": [
-      "Services/PasswordHasher.cs"
+      "Services/PasswordHasher.cs",
+      "Services/LedgerService.cs"
     ],
     "reporters": [
       "html",

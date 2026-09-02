@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veresiye · Ürün &amp; stok</title>
+    <link rel="stylesheet" href="industry.css">
+    <link rel="stylesheet" href="app.css">
+    <script src="config.js"></script>
+    <script src="csrf.js"></script>
+    <script src="app-shell.js"></script>
+</head>
+
+<body>
+    <div class="layout">
+        <aside id="app-nav"></aside>
+        <main class="main">
+            <header>
+                <h1>Ürün &amp; stok</h1>
+                <p id="subtitle" class="muted">Yükleniyor…</p>
+            </header>
+
+            <section class="section" id="form-section">
+                <h3 id="form-title">Yeni ürün</h3>
+                <div class="form-row">
+                    <div class="field" style="flex:1.6 1 200px"><label>Ürün adı</label>
+                        <input id="p-name" placeholder="Örn. Süt Yemi %19"></div>
+                    <div class="field" style="flex:1 1 120px"><label>Birim</label>
+                        <input id="p-unit" placeholder="çuval / kg / balya"></div>
+                    <div class="field" style="flex:1 1 100px"><label>Fiyat</label>
+                        <input id="p-price" type="number" min="0" step="0.5"></div>
+                    <div class="field" style="flex:1 1 100px"><label>Stok</label>
+                        <input id="p-stock" type="number" min="0" step="0.5"></div>
+                    <div class="field" style="flex:1 1 110px"><label>Kritik eşik</label>
+                        <input id="p-critical" type="number" min="0" step="1" placeholder="varsayılan"></div>
+                    <div style="display:flex;gap:8px">
+                        <button class="btn primary" id="submit">Ekle</button>
+                        <button class="btn" id="cancel" hidden>İptal</button>
+                    </div>
+                </div>
+                <div class="flash" id="flash"></div>
+            </section>
+
+            <div class="table-wrap">
+                <table class="data">
+                    <thead>
+                        <tr>
+                            <th>Ürün</th>
+                            <th>Birim</th>
+                            <th class="num">Fiyat</th>
+                            <th class="num">Stok</th>
+                            <th>Durum</th>
+                            <th class="num">30 gün satış</th>
+                            <th class="num">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rows"></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <div class="overlay" id="session-expired-overlay">
+        <div class="modal" style="width:360px;text-align:center">
+            <h3>Oturum süresi doldu</h3>
+            <p class="muted">Güvenliğin için oturumun sona erdi. Devam etmek için tekrar giriş yap.</p>
+            <div class="modal-actions" style="justify-content:center">
+                <button class="btn primary" onclick="Shell.logout()">Tamam</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var S = window.Shell;
+            var items = [], editingId = null;
+
+            var f = {
+                name: document.getElementById("p-name"),
+                unit: document.getElementById("p-unit"),
+                price: document.getElementById("p-price"),
+                stock: document.getElementById("p-stock"),
+                critical: document.getElementById("p-critical")
+            };
+            document.getElementById("submit").addEventListener("click", submit);
+            document.getElementById("cancel").addEventListener("click", cancelEdit);
+
+            async function load() {
+                try {
+                    items = await S.apiJson("/products");
+                    var value = items.reduce(function (a, p) { return a + p.price * p.stock; }, 0);
+                    document.getElementById("subtitle").textContent =
+                        items.length + " kalem · stok değeri " + S.money(value);
+                    render();
+                } catch (e) {
+                    document.getElementById("subtitle").textContent = "Yüklenemedi: " + e.message;
+                }
+            }
+
+            function render() {
+                var body = document.getElementById("rows");
+                if (!items.length) {
+                    body.innerHTML = '<tr><td colspan="7" class="muted" style="text-align:center;padding:24px">Ürün yok.</td></tr>';
+                    return;
+                }
+                body.innerHTML = items.map(function (p) {
+                    return '<tr>' +
+                        '<td style="font-weight:500">' + S.esc(p.name) + '</td>' +
+                        '<td class="muted">' + S.esc(p.unit) + '</td>' +
+                        '<td class="num">' + S.money(p.price) + '</td>' +
+                        '<td class="num" style="font-family:var(--font-heading);font-size:17px;color:' +
+                            (p.critical ? "var(--c-warn-deep)" : "inherit") + '">' + S.qty(p.stock) + '</td>' +
+                        '<td><span class="pill ' + (p.critical ? "warn" : "paid") + '">' +
+                            (p.critical ? "Kritik" : "Yeterli") + '</span></td>' +
+                        '<td class="num muted">' + S.qty(p.sold30) + '</td>' +
+                        '<td class="num"><div style="display:inline-flex;gap:6px;align-items:center">' +
+                            '<button class="btn small" data-act="minus" data-id="' + p.id + '" title="Stoktan düş">−</button>' +
+                            '<button class="btn small" data-act="plus" data-id="' + p.id + '" title="Stok ekle">+</button>' +
+                            '<button class="btn small" data-act="edit" data-id="' + p.id + '">Düzenle</button>' +
+                            '<button class="btn small danger" data-act="del" data-id="' + p.id + '">Sil</button>' +
+                        '</div></td></tr>';
+                }).join("");
+                [].forEach.call(body.querySelectorAll("button[data-act]"), function (b) {
+                    b.addEventListener("click", function () { action(b.dataset.act, +b.dataset.id); });
+                });
+            }
+
+            function action(act, id) {
+                var p = items.find(function (x) { return x.id === id; });
+                if (!p) return;
+                if (act === "plus") return adjust(id, p.unit === "kg" ? 50 : 1);
+                if (act === "minus") return adjust(id, p.unit === "kg" ? -50 : -1);
+                if (act === "edit") return startEdit(p);
+                if (act === "del") return remove(p);
+            }
+
+            async function adjust(id, delta) {
+                try {
+                    await S.apiJson("/products/" + id + "/stock-adjust", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ delta: delta })
+                    });
+                    load();
+                    S.refreshShellStats();
+                } catch (e) { flash(e.message, true); }
+            }
+
+            function startEdit(p) {
+                editingId = p.id;
+                f.name.value = p.name; f.unit.value = p.unit;
+                f.price.value = p.price; f.stock.value = p.stock;
+                f.critical.value = p.criticalStockThreshold == null ? "" : p.criticalStockThreshold;
+                document.getElementById("form-title").textContent = "Ürünü düzenle";
+                document.getElementById("submit").textContent = "Güncelle";
+                document.getElementById("cancel").hidden = false;
+                document.getElementById("form-section").classList.add("warn");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+
+            function cancelEdit() {
+                editingId = null;
+                Object.values(f).forEach(function (el) { el.value = ""; });
+                document.getElementById("form-title").textContent = "Yeni ürün";
+                document.getElementById("submit").textContent = "Ekle";
+                document.getElementById("cancel").hidden = true;
+                document.getElementById("form-section").classList.remove("warn");
+                flash("");
+            }
+
+            async function submit() {
+                if (!f.name.value.trim()) { flash("Ürün adı gerekli.", true); return; }
+                var payload = {
+                    name: f.name.value.trim(),
+                    unit: f.unit.value.trim(),
+                    price: parseFloat(f.price.value) || 0,
+                    stock: parseFloat(f.stock.value) || 0,
+                    criticalStockThreshold: f.critical.value === "" ? null : parseFloat(f.critical.value)
+                };
+                try {
+                    if (editingId) {
+                        await S.apiJson("/products/" + editingId, {
+                            method: "PUT", headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payload)
+                        });
+                        flash(payload.name + " güncellendi.");
+                    } else {
+                        await S.apiJson("/products", {
+                            method: "POST", headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payload)
+                        });
+                        flash(payload.name + " eklendi.");
+                    }
+                    cancelEdit();
+                    load();
+                    S.refreshShellStats();
+                } catch (e) { flash(e.message, true); }
+            }
+
+            async function remove(p) {
+                if (!confirm('"' + p.name + '" silinsin mi? Geçmiş fişler etkilenmez.')) return;
+                try {
+                    await S.apiJson("/products/" + p.id, { method: "DELETE" });
+                    if (editingId === p.id) cancelEdit();
+                    flash(p.name + " silindi.");
+                    load();
+                    S.refreshShellStats();
+                } catch (e) { flash(e.message, true); }
+            }
+
+            function flash(msg, isErr) {
+                var el = document.getElementById("flash");
+                el.className = "flash" + (isErr ? " error" : "");
+                el.textContent = msg || "";
+            }
+
+            load();
+        })();
+    </script>
+</body>
+
+</html>

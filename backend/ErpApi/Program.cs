@@ -60,9 +60,21 @@ builder.Services.AddHostedService<ErpApi.Services.SessionExpiryWatcher>();
 // Başarılı girişlerde IP'den kaba şehir/ülke tahmini için (bkz. Services/GeoLocationService.cs)
 builder.Services.AddHttpClient<ErpApi.Services.IGeoLocationService, ErpApi.Services.GeoLocationService>();
 
+// Cari hesap hesaplamaları (bakiye, FIFO kalan, yaşlandırma, ekstre) ve
+// bunların ihtiyaç duyduğu fiş+tahsilat yüklemesi - bkz. Services/Ledger*.cs
+builder.Services.AddScoped<ErpApi.Services.LedgerRepository>();
+builder.Services.AddSingleton<ErpApi.Services.LedgerService>();
+
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Enum'lar (ör. ReceiptType) JSON'da sayı değil, isimleriyle
+        // ("Veresiye") gidip gelsin - frontend okunur değerler gönderiyor.
+        options.JsonSerializerOptions.Converters.Add(
+            new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 
 // Health check.
 //  - postgres / redis: API'nin çalışması için ŞART. Biri düşerse /health -> 503.

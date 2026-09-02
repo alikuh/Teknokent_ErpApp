@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veresiye · Müşteriler</title>
+    <link rel="stylesheet" href="industry.css">
+    <link rel="stylesheet" href="app.css">
+    <script src="config.js"></script>
+    <script src="csrf.js"></script>
+    <script src="app-shell.js"></script>
+</head>
+
+<body>
+    <div class="layout">
+        <aside id="app-nav"></aside>
+        <main class="main">
+            <header style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+                <div>
+                    <h1>Müşteriler</h1>
+                    <p id="subtitle">Yükleniyor…</p>
+                </div>
+                <div style="display:flex;gap:10px;align-items:end">
+                    <div class="field">
+                        <label>Ara</label>
+                        <input id="q" placeholder="İsim, köy, telefon" style="width:260px">
+                    </div>
+                    <button class="btn primary" id="new-btn">Yeni müşteri</button>
+                </div>
+            </header>
+
+            <div class="table-wrap">
+                <table class="data">
+                    <thead>
+                        <tr>
+                            <th>Müşteri</th>
+                            <th>Köy / mahalle</th>
+                            <th>Telefon</th>
+                            <th>Son hareket</th>
+                            <th class="num">Fiş</th>
+                            <th class="num">Bakiye</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rows"></tbody>
+                </table>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:16px">
+                <span class="muted" id="page-info"></span>
+                <div style="display:flex;gap:8px">
+                    <button class="btn small" id="prev">← Önceki</button>
+                    <button class="btn small" id="next">Sonraki →</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="overlay" id="new-overlay">
+        <div class="modal">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <h3>Yeni müşteri</h3>
+            <div class="field"><label>Ad soyad</label><input id="n-name"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="field"><label>Köy / mahalle</label><input id="n-village"></div>
+                <div class="field"><label>Telefon</label><input id="n-phone" placeholder="05.. ... .. .."></div>
+            </div>
+            <div class="field"><label>Not</label><input id="n-note" placeholder="Opsiyonel"></div>
+            <div class="flash error" id="n-error"></div>
+            <div class="modal-actions">
+                <button class="btn" id="n-cancel">Vazgeç</button>
+                <button class="btn primary" id="n-save">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="overlay" id="session-expired-overlay">
+        <div class="modal" style="width:360px;text-align:center">
+            <h3>Oturum süresi doldu</h3>
+            <p class="muted">Güvenliğin için oturumun sona erdi. Devam etmek için tekrar giriş yap.</p>
+            <div class="modal-actions" style="justify-content:center">
+                <button class="btn primary" onclick="Shell.logout()">Tamam</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var S = window.Shell;
+            var page = 0, pageSize = 12, total = 0, debounce;
+
+            var q = document.getElementById("q");
+            q.addEventListener("input", function () {
+                clearTimeout(debounce);
+                debounce = setTimeout(function () { page = 0; load(); }, 250);
+            });
+            document.getElementById("prev").addEventListener("click", function () {
+                if (page > 0) { page--; load(); }
+            });
+            document.getElementById("next").addEventListener("click", function () {
+                if ((page + 1) * pageSize < total) { page++; load(); }
+            });
+
+            document.getElementById("new-btn").addEventListener("click", openModal);
+            document.getElementById("n-cancel").addEventListener("click", closeModal);
+            document.getElementById("n-save").addEventListener("click", save);
+
+            async function load() {
+                try {
+                    var data = await S.apiJson("/customers?q=" + encodeURIComponent(q.value.trim()) +
+                        "&page=" + page + "&pageSize=" + pageSize);
+                    total = data.total;
+                    document.getElementById("subtitle").textContent =
+                        data.total + " kayıt · " + data.debtorCount + " borçlu";
+                    renderRows(data.items);
+                    var from = data.total ? page * pageSize + 1 : 0;
+                    var to = Math.min(data.total, (page + 1) * pageSize);
+                    document.getElementById("page-info").textContent =
+                        data.total ? (from + "–" + to + " / " + data.total) : "Kayıt bulunamadı";
+                } catch (e) {
+                    document.getElementById("subtitle").textContent = "Yüklenemedi: " + e.message;
+                }
+            }
+
+            function renderRows(items) {
+                var body = document.getElementById("rows");
+                if (!items.length) {
+                    body.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px">Kayıt yok.</td></tr>';
+                    return;
+                }
+                body.innerHTML = items.map(function (c) {
+                    var clean = c.balance <= 0;
+                    return '<tr class="clickable" onclick="location.href=\'musteri.html?id=' + c.id + '\'">' +
+                        '<td style="font-weight:500">' + S.esc(c.name) + '</td>' +
+                        '<td class="muted">' + S.esc(c.village || "—") + '</td>' +
+                        '<td class="muted">' + S.esc(c.phone || "—") + '</td>' +
+                        '<td class="muted">' + S.dtext(c.lastMovement) + '</td>' +
+                        '<td class="num muted">' + c.receiptCount + '</td>' +
+                        '<td class="amount ' + (clean ? "paid" : "debt") + '">' +
+                        (clean ? "temiz" : S.money(c.balance)) + '</td></tr>';
+                }).join("");
+            }
+
+            function openModal() {
+                ["n-name", "n-village", "n-phone", "n-note"].forEach(function (id) {
+                    document.getElementById(id).value = "";
+                });
+                document.getElementById("n-error").textContent = "";
+                document.getElementById("new-overlay").classList.add("open");
+                document.getElementById("n-name").focus();
+            }
+            function closeModal() { document.getElementById("new-overlay").classList.remove("open"); }
+
+            async function save() {
+                var name = document.getElementById("n-name").value.trim();
+                if (!name) { document.getElementById("n-error").textContent = "Ad soyad gerekli."; return; }
+                try {
+                    await S.apiJson("/customers", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            name: name,
+                            village: document.getElementById("n-village").value.trim(),
+                            phone: document.getElementById("n-phone").value.trim(),
+                            note: document.getElementById("n-note").value.trim()
+                        })
+                    });
+                    closeModal();
+                    page = 0; q.value = "";
+                    load();
+                } catch (e) {
+                    document.getElementById("n-error").textContent = e.message || "Kaydedilemedi.";
+                }
+            }
+
+            load();
+        })();
+    </script>
+</body>
+
+</html>

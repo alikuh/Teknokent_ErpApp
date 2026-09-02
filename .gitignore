@@ -21,3 +21,6 @@ Thumbs.db
 
 # Mutation testing
 StrykerOutput/
+
+# Paylaşılan tasarım export paketleri
+*.zip

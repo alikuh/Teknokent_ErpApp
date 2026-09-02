@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veresiye · Yeni satış</title>
+    <link rel="stylesheet" href="industry.css">
+    <link rel="stylesheet" href="app.css">
+    <script src="config.js"></script>
+    <script src="csrf.js"></script>
+    <script src="app-shell.js"></script>
+</head>
+
+<body>
+    <div class="layout">
+        <aside id="app-nav"></aside>
+        <main class="main">
+            <header>
+                <h1>Yeni satış / fiş</h1>
+                <p class="muted">Müşteri seç, satırları ekle, ödeme şeklini işaretle.</p>
+            </header>
+
+            <div class="grid-main-aside">
+                <section style="border:1px solid var(--color-divider);padding:20px">
+                    <div class="form-row" style="padding-bottom:16px;border-bottom:1px solid var(--color-divider)">
+                        <div class="field" style="flex:1 1 240px;min-width:220px">
+                            <label>Ürün</label>
+                            <select id="product"></select>
+                        </div>
+                        <div class="field" style="flex:0 0 110px">
+                            <label>Miktar</label>
+                            <input id="qty" type="number" min="0" step="0.5" value="1">
+                        </div>
+                        <button class="btn" id="add-line">Satır ekle</button>
+
+                        <div style="flex:1 1 100%;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--c-steel);border-left:5px solid var(--c-steel);background:var(--c-steel-tint)">
+                            <div>
+                                <div style="font-family:var(--font-heading);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-steel-deep)">Seçili ürün</div>
+                                <div style="font-family:var(--font-heading);font-size:22px" id="sel-name">Ürün seç</div>
+                                <div class="muted" style="font-size:13px" id="sel-info">—</div>
+                            </div>
+                            <div style="text-align:right">
+                                <div style="font-family:var(--font-heading);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--c-steel-deep)">Eklenecek satır</div>
+                                <div style="font-family:var(--font-heading);font-size:24px;color:var(--c-steel-deep)" id="line-total">0,00 ₺</div>
+                                <div style="font-size:13px;font-weight:500" id="stock-warn"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="chips" style="display:flex;flex-wrap:wrap;gap:6px;padding:14px 0"></div>
+
+                    <div class="table-wrap">
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>Ürün</th>
+                                    <th class="num">Miktar</th>
+                                    <th class="num">Birim</th>
+                                    <th class="num">Tutar</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="cart"></tbody>
+                        </table>
+                    </div>
+                    <p class="foot-note" id="cart-foot">Henüz satır yok — ürünü seç, miktarı yaz, "Satır ekle"ye bas.</p>
+                </section>
+
+                <section style="border:1px solid var(--color-divider);padding:20px;display:flex;flex-direction:column;gap:14px">
+                    <div class="field">
+                        <label>Müşteri</label>
+                        <select id="customer"></select>
+                        <span class="muted" style="font-size:13px" id="cust-balance"></span>
+                    </div>
+
+                    <div class="field">
+                        <label>Ödeme şekli</label>
+                        <div class="seg" id="pay-type">
+                            <button data-type="Veresiye" class="active debt">Veresiye</button>
+                            <button data-type="Nakit" class="paid">Nakit</button>
+                            <button data-type="Kart" class="ink">Kart</button>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label>Not / açıklama</label>
+                        <textarea id="note" rows="2" placeholder="Örn. hasat sonu ödeyecek"></textarea>
+                    </div>
+
+                    <div style="border-top:1px solid var(--color-divider);padding-top:12px;display:flex;justify-content:space-between;align-items:baseline">
+                        <span style="font-family:var(--font-heading);font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Fiş toplamı</span>
+                        <span style="font-family:var(--font-heading);font-size:30px;white-space:nowrap" id="cart-total">0,00 ₺</span>
+                    </div>
+
+                    <button class="btn primary" id="save" style="position:relative;padding:13px 18px;font-size:18px">
+                        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+                        Fişi kaydet
+                    </button>
+                    <div class="flash" id="flash"></div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <div class="overlay" id="session-expired-overlay">
+        <div class="modal" style="width:360px;text-align:center">
+            <h3>Oturum süresi doldu</h3>
+            <p class="muted">Güvenliğin için oturumun sona erdi. Devam etmek için tekrar giriş yap.</p>
+            <div class="modal-actions" style="justify-content:center">
+                <button class="btn primary" onclick="Shell.logout()">Tamam</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var S = window.Shell;
+            var products = [], customers = [], balances = {}, cart = [], payType = "Veresiye";
+            var preCustomer = new URLSearchParams(location.search).get("customer");
+
+            var productSel = document.getElementById("product");
+            var qtyInput = document.getElementById("qty");
+            var customerSel = document.getElementById("customer");
+
+            productSel.addEventListener("change", renderSelected);
+            qtyInput.addEventListener("input", renderSelected);
+            customerSel.addEventListener("change", renderCustBalance);
+            document.getElementById("add-line").addEventListener("click", addLine);
+            document.getElementById("save").addEventListener("click", save);
+            document.getElementById("pay-type").addEventListener("click", function (e) {
+                var b = e.target.closest("button");
+                if (!b) return;
+                payType = b.dataset.type;
+                [].forEach.call(this.children, function (c) { c.classList.toggle("active", c === b); });
+            });
+
+            async function init() {
+                try {
+                    products = await S.apiJson("/products");
+                    var cdata = await S.apiJson("/customers?pageSize=200");
+                    customers = cdata.items;
+                    customers.forEach(function (c) { balances[c.id] = c.balance; });
+                } catch (e) {
+                    document.getElementById("flash").className = "flash error";
+                    document.getElementById("flash").textContent = "Veri yüklenemedi: " + e.message;
+                    return;
+                }
+
+                productSel.innerHTML = products.map(function (p) {
+                    return '<option value="' + p.id + '">' + S.esc(p.name) + ' — ' + S.money(p.price) + ' / ' + S.esc(p.unit) + '</option>';
+                }).join("");
+                customerSel.innerHTML = customers.map(function (c) {
+                    return '<option value="' + c.id + '">' + S.esc(c.name) + ' — ' + S.esc(c.village || "—") + '</option>';
+                }).join("");
+                if (preCustomer) customerSel.value = preCustomer;
+
+                document.getElementById("chips").innerHTML = products.map(function (p) {
+                    return '<button class="btn small" data-id="' + p.id + '" style="text-transform:none;letter-spacing:0">' + S.esc(p.name) + '</button>';
+                }).join("");
+                document.getElementById("chips").addEventListener("click", function (e) {
+                    var b = e.target.closest("button");
+                    if (b) { productSel.value = b.dataset.id; renderSelected(); }
+                });
+
+                renderSelected();
+                renderCustBalance();
+                renderCart();
+            }
+
+            function selectedProduct() {
+                return products.find(function (p) { return String(p.id) === productSel.value; });
+            }
+
+            function renderSelected() {
+                var p = selectedProduct();
+                var q = parseFloat(qtyInput.value) || 0;
+                if (!p) return;
+                document.getElementById("sel-name").textContent = p.name;
+                document.getElementById("sel-info").textContent =
+                    S.money(p.price) + " / " + p.unit + " · depoda " + S.qty(p.stock) + " " + p.unit;
+                document.getElementById("line-total").textContent = S.money(p.price * q);
+                var warn = document.getElementById("stock-warn");
+                if (q > 0 && q > p.stock) {
+                    warn.textContent = "Stok yetersiz — depoda " + S.qty(p.stock) + " " + p.unit + " (yine de satılabilir)";
+                    warn.style.color = "var(--c-debt-deep)";
+                } else {
+                    warn.textContent = q > 0 ? S.qty(q) + " " + p.unit : "Miktar gir";
+                    warn.style.color = "var(--color-neutral-700)";
+                }
+            }
+
+            function renderCustBalance() {
+                var bal = balances[customerSel.value] || 0;
+                document.getElementById("cust-balance").textContent = "Mevcut bakiye: " + S.money(bal);
+            }
+
+            function addLine() {
+                var p = selectedProduct();
+                var q = parseFloat(qtyInput.value);
+                var flash = document.getElementById("flash");
+                flash.className = "flash";
+                if (!p) return;
+                if (!q || q <= 0) { flash.className = "flash error"; flash.textContent = "Geçerli bir miktar gir."; return; }
+                cart.push({ productId: p.id, name: p.name, unit: p.unit, qty: q, unitPrice: p.price });
+                flash.textContent = "";
+                renderCart();
+            }
+
+            function removeLine(i) { cart.splice(i, 1); renderCart(); }
+
+            function renderCart() {
+                var body = document.getElementById("cart");
+                body.innerHTML = cart.map(function (l, i) {
+                    return '<tr>' +
+                        '<td>' + S.esc(l.name) + '</td>' +
+                        '<td class="num">' + S.qty(l.qty) + ' ' + S.esc(l.unit) + '</td>' +
+                        '<td class="num muted">' + S.money(l.unitPrice) + '</td>' +
+                        '<td class="num" style="font-family:var(--font-heading);font-size:16px">' + S.money(l.qty * l.unitPrice) + '</td>' +
+                        '<td class="num"><button class="btn small" data-i="' + i + '">×</button></td></tr>';
+                }).join("");
+                [].forEach.call(body.querySelectorAll("button[data-i]"), function (b) {
+                    b.addEventListener("click", function () { removeLine(+b.dataset.i); });
+                });
+                var total = cart.reduce(function (a, l) { return a + l.qty * l.unitPrice; }, 0);
+                document.getElementById("cart-total").textContent = S.money(total);
+                document.getElementById("cart-foot").textContent =
+                    cart.length ? (cart.length + " satır") : 'Henüz satır yok — ürünü seç, miktarı yaz, "Satır ekle"ye bas.';
+            }
+
+            async function save() {
+                var flash = document.getElementById("flash");
+                flash.className = "flash";
+                if (!cart.length) { flash.className = "flash error"; flash.textContent = "Fişe en az bir satır ekle."; return; }
+                if (!customerSel.value) { flash.className = "flash error"; flash.textContent = "Müşteri seç."; return; }
+                try {
+                    var res = await S.apiJson("/receipts", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            customerId: +customerSel.value,
+                            type: payType,
+                            note: document.getElementById("note").value.trim(),
+                            lines: cart.map(function (l) { return { productId: l.productId, quantity: l.qty }; })
+                        })
+                    });
+                    var name = (customers.find(function (c) { return String(c.id) === customerSel.value; }) || {}).name || "";
+                    flash.textContent = name + " — " + S.money(res.total) + " fiş kaydedildi (" + res.type + ").";
+                    cart = [];
+                    document.getElementById("note").value = "";
+                    renderCart();
+                    // stok + bakiye tazele
+                    products = await S.apiJson("/products");
+                    productSel.dispatchEvent(new Event("change"));
+                    var cdata = await S.apiJson("/customers?pageSize=200");
+                    cdata.items.forEach(function (c) { balances[c.id] = c.balance; });
+                    renderCustBalance();
+                    S.refreshShellStats();
+                } catch (e) {
+                    flash.className = "flash error";
+                    flash.textContent = e.message || "Fiş kaydedilemedi.";
+                }
+            }
+
+            init();
+        })();
+    </script>
+</body>
+
+</html>
