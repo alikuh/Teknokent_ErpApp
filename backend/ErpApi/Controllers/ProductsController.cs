@@ -56,14 +56,15 @@ public class ProductsController : ControllerBase
             .ToListAsync();
 
         var since = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-30);
-        var sold30 = await _context.ReceiptLines
+        var sold30 = (await _context.ReceiptLines
             .AsNoTracking()
             .Where(l => l.Receipt!.UserId == userId
                         && l.Receipt.Date >= since
                         && l.ProductId != null)
-            .GroupBy(l => l.ProductId!.Value)
+            .GroupBy(l => l.ProductId)
             .Select(g => new { ProductId = g.Key, Qty = g.Sum(x => x.Quantity) })
-            .ToDictionaryAsync(x => x.ProductId, x => x.Qty);
+            .ToListAsync())
+            .ToDictionary(x => x.ProductId!.Value, x => x.Qty);
 
         return Ok(products.Select(p => ToDto(p, sold30.GetValueOrDefault(p.Id))));
     }
